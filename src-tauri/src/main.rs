@@ -14,7 +14,7 @@ use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, Set
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetClientRect, GetWindow, GetWindowRect, IsWindowVisible, GW_CHILD, GW_HWNDNEXT};
 #[cfg(windows)]
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_L, VK_T, VK_W};
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_L, VK_N, VK_R, VK_SHIFT, VK_T, VK_TAB, VK_W};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 static CLEARER_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -214,15 +214,20 @@ fn install_shortcuts(view: &tauri::Webview, app: tauri::AppHandle) {
                 let event = unsafe { args.KeyEventKind(&mut event_kind).and_then(|_| args.VirtualKey(&mut virtual_key)) };
                 if event.is_ok() && event_kind == COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN
                     && unsafe { GetKeyState(VK_CONTROL.0.into()) } < 0 {
+                    let shift = unsafe { GetKeyState(VK_SHIFT.0.into()) } < 0;
                     let action = match virtual_key {
-                        key if key == VK_T.0 as u32 => Some("new-tab"),
-                        key if key == VK_L.0 as u32 => Some("focus-address"),
-                        key if key == VK_W.0 as u32 => Some("close-tab"),
+                        key if key == VK_T.0 as u32 && shift => Some(("restore-tab", false)),
+                        key if key == VK_T.0 as u32 => Some(("new-tab", false)),
+                        key if key == VK_L.0 as u32 => Some(("focus-address", false)),
+                        key if key == VK_W.0 as u32 => Some(("close-tab", false)),
+                        key if key == VK_R.0 as u32 => Some(("reload", false)),
+                        key if key == VK_TAB.0 as u32 => Some(("next-tab", shift)),
+                        key if key == VK_N.0 as u32 && shift => Some(("private-tab", false)),
                         _ => None,
                     };
-                    if let Some(action) = action {
+                    if let Some((action, reverse)) = action {
                         let _ = unsafe { args.SetHandled(true) };
-                        let _ = app.emit_to("shell", "cherry:shortcut", json!({ "action": action }));
+                        let _ = app.emit_to("shell", "cherry:shortcut", json!({ "action": action, "reverse": reverse }));
                     }
                 }
             }

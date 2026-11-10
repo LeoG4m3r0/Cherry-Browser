@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.4.2-alpha — 2026-11-10
+
+- As últimas abas HTTP/HTTPS abertas são restauradas ao iniciar; abas privadas nunca entram na sessão salva.
+- Adicionados Ctrl+R, Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+Shift+N e Ctrl+Shift+T, inclusive com foco dentro de páginas.
+- O verificador em Sobre consulta os Releases públicos do GitHub, compara versões e abre a página da versão disponível.
+- Restaurar uma sessão não duplica as páginas no Histórico.
+- A barra de ferramentas mostra quando a página carrega e permite interromper o carregamento.
+- Favoritos podem ser removidos diretamente pela lista de gerenciamento.
+
 ## 0.4.1-alpha — 2026-11-09
 
 - Adicionado “Verificar atualizações” em Sobre; informa que a checagem remota depende de um canal público de releases.

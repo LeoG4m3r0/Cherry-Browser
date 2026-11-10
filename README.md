@@ -1,4 +1,4 @@
-# Cherry Browser — Alpha 0.4.1
+# Cherry Browser — Alpha 0.4.2
 
 Navegador para Windows com interface em Rust + Tauri e páginas em abas do WebView2 do Microsoft Edge (Chromium). Este projeto está em **ALPHA**.
 
@@ -8,9 +8,11 @@ Execute `Cherry-Browser-Setup.exe`. O instalador abre uma tela gráfica nativa d
 
 ## Recursos
 
-- Abas dinâmicas, navegação, página inicial, favoritos, histórico e downloads
+- Abas dinâmicas, restauração das últimas abas comuns, navegação, favoritos (com remoção pela lista), histórico e downloads
+- Indicador de carregamento com botão para interromper a página
+- Atalhos Ctrl+T, Ctrl+Shift+T, Ctrl+Shift+N, Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+R, Ctrl+L e Ctrl+W
 - Atalhos de Favoritos e bloqueador de anúncios junto ao botão de downloads
-- Verificador de versão em Sobre; a consulta remota depende da publicação de releases
+- Verificador de versões Alpha em Releases do GitHub, com acesso direto às versões publicadas
 - Google, Microsoft Bing (Edge), Brave Search e DuckDuckGo
 - Bloqueio básico de anúncios e rastreadores conhecidos, com controle nas configurações
 - Personalização de tema claro, escuro ou noturno e capa de cerejas

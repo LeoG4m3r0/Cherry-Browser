@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const readList = key => { const value = read(key); return Array.isArray(value) ? value : []; };
-const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.1', panel: null, menuCutout: false };
+const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.2', panel: null, menuCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
 const engines = {
   google: query => `https://www.google.com/search?q=${query}`,
   bing: query => `https://www.bing.com/search?q=${query}`,
@@ -49,6 +49,12 @@ function updateBookmarkButton() {
   button.classList.toggle('is-saved', saved);
   button.setAttribute('aria-pressed', String(saved));
   button.title = saved ? 'Remover dos favoritos' : 'Adicionar favorito';
+}
+function updateLoadButton() {
+  const button = $('#reload'), loading = state.loadingTabs.has(state.active);
+  button.textContent = loading ? '×' : '⟳';
+  button.title = loading ? 'Parar carregamento' : 'Recarregar';
+  button.setAttribute('aria-label', button.title);
 }
 function renderHome() {
   const container = $('#quickLinks'); container.replaceChildren();
@@ -98,6 +104,7 @@ async function activate(id) {
   $('#panelHost').classList.add('hidden'); $('#homeView').classList.toggle('hidden', !!tab.url);
   $('#address').value = tab.url || ''; $('#privacyMark').textContent = tab.private ? '◉' : '◈'; $('#privacyMark').classList.toggle('private', tab.private);
   updateBookmarkButton();
+  updateLoadButton();
   await Promise.all(state.tabs.filter(other => other.ready && other.id !== id).map(other => invoke('set_page_visible', { label: other.id, visible: false })));
   await setBounds(tab);
   if (tab.ready) {
@@ -140,11 +147,11 @@ async function toggleMenu() {
     await updateMenuCutout();
   }
 }
-async function addTab(url = '', privateMode = false) {
+async function addTab(url = '', privateMode = false, recordHistory = true) {
   const id = 'tab_' + (++state.seq), tab = { id, title: privateMode ? 'Privada' : 'Nova aba', url: '', private: privateMode, ready: false };
-  state.tabs.push(tab); renderTabs(true); await activate(id); if (url) await navigate(url); return tab;
+  state.tabs.push(tab); renderTabs(true); await activate(id); if (url) await navigate(url, recordHistory); return tab;
 }
-async function navigate(input) {
+async function navigate(input, recordHistory = true) {
   const tab = active(); if (!tab) return;
   const returningFromPanel = !!state.panel;
   const url = searchUrl(input); tab.url = url; $('#address').value = url; $('#homeView').classList.add('hidden'); $('#panelHost').classList.add('hidden'); state.panel = null;
@@ -158,18 +165,39 @@ async function navigate(input) {
     }
   }
   else { await invoke('create_page', { label: tab.id, url, x: 0, y: 0, width: 100, height: 100, incognito: tab.private, adBlock: adBlockEnabled(), visible: true }); tab.ready = true; await setBounds(tab); }
-  if (!tab.private) { const history = readList('cherry.history'); history.unshift({ url, at: Date.now() }); save('cherry.history', history.slice(0, 500)); }
+  if (!tab.private) { if (recordHistory) { const history = readList('cherry.history'); history.unshift({ url, at: Date.now() }); save('cherry.history', history.slice(0, 500)); } persistSession(); }
+}
+function persistSession() {
+  save('cherry.session', state.tabs
+    .filter(tab => !tab.private && /^https?:\/\//i.test(tab.url))
+    .slice(-12)
+    .map(({ url, title }) => ({ url, title })));
 }
 async function closeTab(id) {
   const index = state.tabs.findIndex(tab => tab.id === id); if (index < 0) return;
   if (id === state.active && state.menuCutout) await closeMenu(false);
+  const closing = state.tabs[index];
+  if (!closing.private && /^https?:\/\//i.test(closing.url)) { state.closedTabs.push(closing.url); state.closedTabs = state.closedTabs.slice(-10); }
   if (state.tabs[index].ready) await invoke('close_page', { label: id }); state.tabs.splice(index, 1);
+  persistSession();
   if (!state.tabs.length) { state.active = null; await addTab(); } else if (state.active === id) await activate(state.tabs[Math.max(0, index - 1)].id);
   renderTabs();
 }
 function addListItems(container, items, kind) {
   if (!items.length) { container.textContent = 'Ainda não há itens.'; return; }
   for (const item of items) {
+    if (kind === 'bookmarks') {
+      const row = document.createElement('div'); row.className = 'bookmark-list-row';
+      const open = document.createElement('button'); open.className = 'list-row'; open.innerHTML = '<strong></strong><small></small>';
+      open.querySelector('strong').textContent = item.title || item.url; open.querySelector('small').textContent = item.url;
+      open.onclick = () => navigate(item.url);
+      const remove = document.createElement('button'); remove.className = 'bookmark-remove'; remove.textContent = 'Remover'; remove.title = 'Remover favorito';
+      remove.onclick = () => {
+        const updated = readList('cherry.bookmarks').filter(saved => canonicalUrl(saved.url) !== canonicalUrl(item.url));
+        save('cherry.bookmarks', updated); renderBookmarks(); renderHome(); updateBookmarkButton(); showPanel('bookmarks'); toast('Favorito removido');
+      };
+      row.append(open, remove); container.append(row); continue;
+    }
     const row = document.createElement('button'); row.className = 'list-row'; row.innerHTML = '<strong></strong><small></small>';
     row.querySelector('strong').textContent = item.title || item.url || item.name || item.path || 'Download';
     row.querySelector('small').textContent = kind === 'history' && item.at ? new Date(item.at).toLocaleString('pt-BR') : item.url || item.path || item.name || '';
@@ -199,16 +227,30 @@ async function showPanel(which) {
     $('#themeChoice').value = localStorage.getItem('cherry.theme') || 'cherry'; $('#coverToggle').checked = localStorage.getItem('cherry.cover') !== 'false';
     $('#saveAppearance').onclick = () => { localStorage.setItem('cherry.theme', $('#themeChoice').value); localStorage.setItem('cherry.cover', $('#coverToggle').checked); applyAppearance(); toast('Personalização aplicada'); };
   } else if (which === 'about') {
-    body.innerHTML = `<img class="about-mark" src="/assets/cherry-logo.svg" alt="Logo de cereja"><h3>Cherry Browser</h3><p>by Leo e Vini</p><p><span class="alpha-badge">ALPHA</span> · Versão ${state.version}</p><p>Navegador leve para Windows usando o WebView2 do Microsoft Edge.</p><p>Interface própria com tema de cerejas.</p><button id="checkUpdates" class="primary">↻ Verificar atualizações</button><p id="updateStatus" class="update-status" aria-live="polite">O canal público de atualizações ainda não foi configurado.</p>`;
+    body.innerHTML = `<img class="about-mark" src="/assets/cherry-logo.svg" alt="Logo de cereja"><h3>Cherry Browser</h3><p>by Leo e Vini</p><p><span class="alpha-badge">ALPHA</span> · Versão ${state.version}</p><p>Navegador leve para Windows usando o WebView2 do Microsoft Edge.</p><p>Interface própria com tema de cerejas.</p><button id="checkUpdates" class="primary">↻ Verificar atualizações</button><p id="updateStatus" class="update-status" aria-live="polite">Consulta as versões Alpha publicadas no GitHub.</p><button id="openRelease" class="primary hidden">Ver versão no GitHub</button>`;
     $('#checkUpdates').onclick = async event => {
       const button = event.currentTarget, status = $('#updateStatus');
-      button.disabled = true; status.textContent = 'Verificando a versão instalada…';
+      const releaseButton = $('#openRelease');
+      button.disabled = true; releaseButton.classList.add('hidden'); status.textContent = 'Consultando as versões públicas…';
       try {
         state.version = await invoke('app_version');
-        status.textContent = `Esta instalação está na versão ${state.version}-alpha. Não há repositório público configurado para comparar versões.`;
-      } catch { status.textContent = 'Não foi possível ler a versão instalada.'; }
+        const response = await fetch('https://api.github.com/repos/LeoG4m3r0/Cherry-Browser/releases?per_page=20', {
+          headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store', signal: AbortSignal.timeout(12000)
+        });
+        if (!response.ok) throw new Error(`GitHub respondeu ${response.status}`);
+        const releases = await response.json();
+        const valid = releases.filter(release => !release.draft && /^v?\d+\.\d+\.\d+/.test(release.tag_name || ''));
+        const latest = valid.sort((a, b) => compareVersions(b.tag_name, a.tag_name))[0];
+        if (!latest) { status.textContent = `Você está na versão ${state.version}-alpha. Ainda não há versões publicadas para baixar.`; return; }
+        const latestVersion = latest.tag_name.replace(/^v/, '').split('-')[0];
+        if (compareVersions(latestVersion, state.version) > 0) {
+          status.textContent = `A versão ${latest.tag_name} está disponível (instalada: ${state.version}-alpha).`;
+          state.latestRelease = latest.html_url; releaseButton.classList.remove('hidden');
+        } else status.textContent = `Você está atualizado: ${state.version}-alpha.`;
+      } catch { status.textContent = 'Não foi possível consultar o GitHub. Confira sua conexão e tente de novo.'; }
       finally { button.disabled = false; }
     };
+    $('#openRelease').onclick = () => state.latestRelease && navigate(state.latestRelease);
   } else {
     body.innerHTML = `<h3>${titles[which] || 'Cherry Browser'}</h3>`;
   }
@@ -219,7 +261,7 @@ $('#address').addEventListener('keydown', event => { if (event.key === 'Enter') 
 $('#homeSearch').addEventListener('keydown', event => { if (event.key === 'Enter') navigate($('#homeSearch').value); }); $('#homeGo').onclick = () => navigate($('#homeSearch').value);
 $('#back').onclick = () => active()?.ready && invoke('page_action', { label: state.active, action: 'back' });
 $('#forward').onclick = () => active()?.ready && invoke('page_action', { label: state.active, action: 'forward' });
-$('#reload').onclick = () => active()?.ready ? invoke('page_action', { label: state.active, action: 'reload' }) : activate(state.active);
+$('#reload').onclick = () => active()?.ready ? invoke('page_action', { label: state.active, action: state.loadingTabs.has(state.active) ? 'stop' : 'reload' }) : activate(state.active);
 $('#home').onclick = async () => { const tab = active(); if (tab) { await closeMenu(false); state.panel = null; $('#panelHost').classList.add('hidden'); if (tab.ready) await invoke('close_page', { label: tab.id }); tab.ready = false; tab.url = ''; tab.title = 'Nova aba'; $('#address').value = ''; $('#homeView').classList.remove('hidden'); renderTabs(); } };
 $('#bookmark').onclick = () => { const tab = active(); if (!tab?.url) return toast('Abra uma página primeiro'); const items = readList('cherry.bookmarks'), index = items.findIndex(item => canonicalUrl(item.url) === canonicalUrl(tab.url)); if (index >= 0) { items.splice(index, 1); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito removido'); return; } items.unshift({ url: tab.url, title: tab.title || tab.url }); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito salvo'); };
 $('#downloads').onclick = () => showPanel('downloads'); $('#favorites').onclick = () => showPanel('bookmarks'); $('#adBlockBtn').onclick = toggleAdBlock; $('#menuBtn').onclick = () => toggleMenu(); $('#menuBackdrop').onclick = () => closeMenu();
@@ -232,13 +274,45 @@ addEventListener('resize', () => {
     setBounds(active()).then(updateMenuCutout).catch(error => toast(error?.message || 'Não foi possível ajustar a página'));
   }, 70);
 });
-document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't') { event.preventDefault(); addTab(); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'l') { event.preventDefault(); $('#address').focus(); $('#address').select(); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w' && active()) { event.preventDefault(); closeTab(state.active); } if (event.key === 'Escape') closeMenu(); });
+function compareVersions(left, right) {
+  const a = String(left).replace(/^[vV]/, '').split('.').map(part => parseInt(part, 10) || 0);
+  const b = String(right).replace(/^[vV]/, '').split('.').map(part => parseInt(part, 10) || 0);
+  for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0);
+  return 0;
+}
+function switchTab(direction) {
+  if (state.tabs.length < 2) return;
+  const index = state.tabs.findIndex(tab => tab.id === state.active);
+  const next = (index + direction + state.tabs.length) % state.tabs.length;
+  activate(state.tabs[next].id);
+}
+function reopenClosedTab() {
+  const url = state.closedTabs.pop();
+  if (url) addTab(url, false, false);
+}
+document.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey)) { if (event.key === 'Escape') closeMenu(); return; }
+  const key = event.key.toLowerCase();
+  if (key === 't') { event.preventDefault(); if (event.shiftKey) reopenClosedTab(); else addTab(); }
+  else if (key === 'l') { event.preventDefault(); $('#address').focus(); $('#address').select(); }
+  else if (key === 'w' && active()) { event.preventDefault(); closeTab(state.active); }
+  else if (key === 'r' && active()?.ready) { event.preventDefault(); invoke('page_action', { label: state.active, action: 'reload' }); }
+  else if (key === 'tab') { event.preventDefault(); switchTab(event.shiftKey ? -1 : 1); }
+  else if (key === 'n' && event.shiftKey) { event.preventDefault(); addTab('', true); }
+});
 listen('cherry:title', event => { const tab = state.tabs.find(item => item.id === event.payload.label); if (tab) { tab.title = event.payload.title || tab.url; renderTabs(); renderBookmarks(); } });
-listen('cherry:navigation', event => { const tab = state.tabs.find(item => item.id === event.payload.label); if (tab) { tab.url = event.payload.url; if (tab.id === state.active) { $('#address').value = tab.url; updateBookmarkButton(); } } });
-listen('cherry:shortcut', event => { if (event.payload.action === 'new-tab') addTab(); else if (event.payload.action === 'focus-address') { $('#address').focus(); $('#address').select(); } else if (event.payload.action === 'close-tab' && active()) closeTab(state.active); });
+listen('cherry:navigation', event => { const tab = state.tabs.find(item => item.id === event.payload.label); if (tab) { tab.url = event.payload.url; if (tab.id === state.active) { $('#address').value = tab.url; updateBookmarkButton(); } if (!tab.private) persistSession(); } });
+listen('cherry:shortcut', event => { if (event.payload.action === 'new-tab') addTab(); else if (event.payload.action === 'restore-tab') reopenClosedTab(); else if (event.payload.action === 'focus-address') { $('#address').focus(); $('#address').select(); } else if (event.payload.action === 'close-tab' && active()) closeTab(state.active); else if (event.payload.action === 'reload' && active()?.ready) invoke('page_action', { label: state.active, action: 'reload' }); else if (event.payload.action === 'private-tab') addTab('', true); else if (event.payload.action === 'next-tab') switchTab(event.payload.reverse ? -1 : 1); });
 listen('cherry:new-window', event => { const parent = state.tabs.find(tab => tab.id === event.payload.label); addTab(event.payload.url, !!parent?.private); });
 listen('cherry:download', event => { const download = event.payload, items = readList('cherry.downloads'), existing = items.find(item => item.url === download.url && item.state === 'started'); if (existing) { existing.state = download.state; existing.path = download.path || existing.path; } else items.unshift({ url: download.url, path: download.path, state: download.state, at: Date.now() }); if (!download.incognito) save('cherry.downloads', items.slice(0, 500)); if (download.state === 'finished') toast('Download concluído'); });
-listen('cherry:page-load', event => { if (event.payload.state === 'finished' && event.payload.label === state.active) $('#homeView').classList.add('hidden'); });
-applyAppearance(); updateAdBlockButton(); renderTabs(); renderBookmarks(); renderHome(); invoke('app_version').then(version => state.version = version).catch(() => {}); addTab();
+listen('cherry:page-load', event => {
+  if (event.payload.state === 'started') state.loadingTabs.add(event.payload.label);
+  else state.loadingTabs.delete(event.payload.label);
+  if (event.payload.label === state.active) { updateLoadButton(); if (event.payload.state === 'finished') $('#homeView').classList.add('hidden'); }
+});
+applyAppearance(); updateAdBlockButton(); renderTabs(); renderBookmarks(); renderHome(); invoke('app_version').then(version => state.version = version).catch(() => {});
+const savedTabs = readList('cherry.session').filter(tab => typeof tab.url === 'string' && /^https?:\/\//i.test(tab.url)).slice(-12);
+if (savedTabs.length) { for (const tab of savedTabs) await addTab(tab.url, false, false); }
+else await addTab();
 
 
