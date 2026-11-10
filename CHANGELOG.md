@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.4.3-alpha — 2026-11-10
+
+- Adicionado mini-player flutuante do Spotify junto aos botões de favoritos, downloads e bloqueador.
+- Player aceita links e URIs de faixa, álbum, playlist, artista, episódio ou podcast e lembra o último item usado.
+- O popup recorta apenas a área correspondente da página nativa para aparecer sobre ela sem fechar a navegação.
+
 ## 0.4.2-alpha — 2026-11-10
 
 - As últimas abas HTTP/HTTPS abertas são restauradas ao iniciar; abas privadas nunca entram na sessão salva.

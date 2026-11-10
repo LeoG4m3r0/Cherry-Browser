@@ -1,6 +1,6 @@
 [package]
 name = "cherry-browser"
-version = "0.4.2"
+version = "0.4.3"
 description = "Navegador Cherry Browser para Windows usando WebView2"
 authors = ["Cherry Browser"]
 edition = "2021"

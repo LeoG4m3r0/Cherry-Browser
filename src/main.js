@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const readList = key => { const value = read(key); return Array.isArray(value) ? value : []; };
-const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.2', panel: null, menuCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
+const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.2', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
 const engines = {
   google: query => `https://www.google.com/search?q=${query}`,
   bing: query => `https://www.bing.com/search?q=${query}`,
@@ -97,8 +97,60 @@ async function updateMenuCutout() {
   });
   state.menuCutout = true;
 }
+async function updateSpotifyCutout() {
+  const tab = active(), popup = $('#spotifyPopup');
+  if (popup.classList.contains('hidden') || !tab?.ready) return;
+  const rect = popup.getBoundingClientRect(), pageTop = $('#chrome').getBoundingClientRect().bottom;
+  const left = Math.max(0, rect.left), top = Math.max(rect.top, pageTop);
+  const right = Math.min(window.innerWidth, rect.right), bottom = Math.min(window.innerHeight, rect.bottom);
+  if (right <= left || bottom <= top) return;
+  await invoke('set_page_cutout', { x: left, y: top - pageTop, width: right - left, height: bottom - top, enabled: true });
+  state.spotifyCutout = true;
+}
+async function closeSpotifyPopup(restorePage = true) {
+  const popup = $('#spotifyPopup'), wasOpen = !popup.classList.contains('hidden');
+  if (state.spotifyCutout && active()?.ready) {
+    await invoke('set_page_cutout', { x: 0, y: 0, width: 0, height: 0, enabled: false });
+    state.spotifyCutout = false;
+  }
+  if (!wasOpen) return;
+  popup.classList.add('hidden'); $('#spotifyBtn').setAttribute('aria-expanded', 'false');
+  if (restorePage && active()?.ready) await invoke('focus_page', { label: state.active });
+}
+async function toggleSpotifyPopup() {
+  if (!$('#spotifyPopup').classList.contains('hidden')) return closeSpotifyPopup();
+  await closeMenu(false);
+  if (state.panel && state.active) await activate(state.active);
+  $('#spotifyPopup').classList.remove('hidden'); $('#spotifyBtn').setAttribute('aria-expanded', 'true');
+  await new Promise(requestAnimationFrame); await updateSpotifyCutout();
+}
+function spotifyEmbedUrl(input) {
+  const value = String(input || '').trim();
+  const uri = value.match(/^spotify:(track|album|playlist|artist|episode|show):([a-zA-Z0-9]+)$/i);
+  if (uri) return { embed: `https://open.spotify.com/embed/${uri[1].toLowerCase()}/${uri[2]}`, page: `https://open.spotify.com/${uri[1].toLowerCase()}/${uri[2]}` };
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+    if (url.hostname.toLowerCase() !== 'open.spotify.com') return null;
+    const parts = url.pathname.split('/').filter(Boolean).filter(part => !/^intl-/i.test(part));
+    if (parts[0]?.toLowerCase() === 'embed') parts.shift();
+    const type = parts[0]?.toLowerCase(), id = parts[1];
+    if (!['track', 'album', 'playlist', 'artist', 'episode', 'show'].includes(type) || !/^[a-zA-Z0-9]+$/.test(id || '')) return null;
+    return { embed: `https://open.spotify.com/embed/${type}/${id}`, page: `https://open.spotify.com/${type}/${id}` };
+  } catch { return null; }
+}
+function loadSpotifyEmbed(input) {
+  const target = spotifyEmbedUrl(input), status = $('#spotifyStatus'), player = $('#spotifyPlayer');
+  if (!target) { status.textContent = 'Link inválido. Use um link open.spotify.com de faixa, álbum, playlist, artista ou podcast.'; return; }
+  const iframe = document.createElement('iframe');
+  iframe.title = 'Player incorporado do Spotify'; iframe.loading = 'lazy'; iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+  iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'; iframe.allowFullscreen = true;
+  iframe.src = `${target.embed}?utm_source=generator&theme=${document.documentElement.dataset.theme === 'light' ? '1' : '0'}`;
+  player.replaceChildren(iframe); status.textContent = 'Player carregado. A reprodução é controlada pelo Spotify.';
+  localStorage.setItem('cherry.spotifyEmbed', target.embed);
+}
 async function activate(id) {
   const tab = state.tabs.find(item => item.id === id); if (!tab) return;
+  await closeSpotifyPopup(false);
   await closeMenu(false);
   state.active = id; state.private = tab.private; state.panel = null;
   $('#panelHost').classList.add('hidden'); $('#homeView').classList.toggle('hidden', !!tab.url);
@@ -134,6 +186,7 @@ async function closeMenu(restorePage = true) {
   else if (tab) await setBounds(tab);
 }
 async function toggleMenu() {
+  await closeSpotifyPopup(false);
   if (!$('#menu').classList.contains('hidden')) return closeMenu();
   if (!state.panel) {
     $('#panelHost').classList.add('hidden');
@@ -152,6 +205,7 @@ async function addTab(url = '', privateMode = false, recordHistory = true) {
   state.tabs.push(tab); renderTabs(true); await activate(id); if (url) await navigate(url, recordHistory); return tab;
 }
 async function navigate(input, recordHistory = true) {
+  await closeSpotifyPopup(false);
   const tab = active(); if (!tab) return;
   const returningFromPanel = !!state.panel;
   const url = searchUrl(input); tab.url = url; $('#address').value = url; $('#homeView').classList.add('hidden'); $('#panelHost').classList.add('hidden'); state.panel = null;
@@ -175,6 +229,7 @@ function persistSession() {
 }
 async function closeTab(id) {
   const index = state.tabs.findIndex(tab => tab.id === id); if (index < 0) return;
+  if (id === state.active && state.spotifyCutout) await closeSpotifyPopup(false);
   if (id === state.active && state.menuCutout) await closeMenu(false);
   const closing = state.tabs[index];
   if (!closing.private && /^https?:\/\//i.test(closing.url)) { state.closedTabs.push(closing.url); state.closedTabs = state.closedTabs.slice(-10); }
@@ -205,6 +260,7 @@ function addListItems(container, items, kind) {
   }
 }
 async function showPanel(which) {
+  await closeSpotifyPopup(false);
   state.panel = which; await closeMenu(false);
   await Promise.all(state.tabs.filter(tab => tab.ready).map(tab => invoke('set_page_visible', { label: tab.id, visible: false })));
   $('#homeView').classList.add('hidden'); const host = $('#panelHost'); host.classList.remove('hidden'); host.replaceChildren();
@@ -264,14 +320,19 @@ $('#forward').onclick = () => active()?.ready && invoke('page_action', { label: 
 $('#reload').onclick = () => active()?.ready ? invoke('page_action', { label: state.active, action: state.loadingTabs.has(state.active) ? 'stop' : 'reload' }) : activate(state.active);
 $('#home').onclick = async () => { const tab = active(); if (tab) { await closeMenu(false); state.panel = null; $('#panelHost').classList.add('hidden'); if (tab.ready) await invoke('close_page', { label: tab.id }); tab.ready = false; tab.url = ''; tab.title = 'Nova aba'; $('#address').value = ''; $('#homeView').classList.remove('hidden'); renderTabs(); } };
 $('#bookmark').onclick = () => { const tab = active(); if (!tab?.url) return toast('Abra uma página primeiro'); const items = readList('cherry.bookmarks'), index = items.findIndex(item => canonicalUrl(item.url) === canonicalUrl(tab.url)); if (index >= 0) { items.splice(index, 1); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito removido'); return; } items.unshift({ url: tab.url, title: tab.title || tab.url }); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito salvo'); };
-$('#downloads').onclick = () => showPanel('downloads'); $('#favorites').onclick = () => showPanel('bookmarks'); $('#adBlockBtn').onclick = toggleAdBlock; $('#menuBtn').onclick = () => toggleMenu(); $('#menuBackdrop').onclick = () => closeMenu();
+$('#downloads').onclick = () => showPanel('downloads'); $('#favorites').onclick = () => showPanel('bookmarks'); $('#adBlockBtn').onclick = toggleAdBlock; $('#spotifyBtn').onclick = toggleSpotifyPopup; $('#spotifyClose').onclick = () => closeSpotifyPopup(); $('#menuBtn').onclick = () => toggleMenu(); $('#menuBackdrop').onclick = () => closeMenu();
+$('#spotifyForm').addEventListener('submit', event => { event.preventDefault(); loadSpotifyEmbed($('#spotifyLink').value); });
+document.addEventListener('pointerdown', event => {
+  const popup = $('#spotifyPopup');
+  if (!popup.classList.contains('hidden') && !popup.contains(event.target) && event.target !== $('#spotifyBtn')) closeSpotifyPopup(false);
+});
 $('#menu').querySelectorAll('[data-panel]').forEach(button => button.onclick = () => showPanel(button.dataset.panel));
 $('#clearData').onclick = async () => { try { await invoke('clear_page_data', { labels: state.tabs.filter(tab => tab.ready).map(tab => tab.id) }); localStorage.removeItem('cherry.history'); await closeMenu(); toast('Histórico, cookies e cache foram limpos'); } catch (error) { toast(error?.message || 'Não foi possível limpar os dados'); } };
 let resizeTimer;
 addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    setBounds(active()).then(updateMenuCutout).catch(error => toast(error?.message || 'Não foi possível ajustar a página'));
+    setBounds(active()).then(async () => { await updateMenuCutout(); await updateSpotifyCutout(); }).catch(error => toast(error?.message || 'Não foi possível ajustar a página'));
   }, 70);
 });
 function compareVersions(left, right) {
@@ -291,7 +352,7 @@ function reopenClosedTab() {
   if (url) addTab(url, false, false);
 }
 document.addEventListener('keydown', event => {
-  if (!(event.ctrlKey || event.metaKey)) { if (event.key === 'Escape') closeMenu(); return; }
+  if (!(event.ctrlKey || event.metaKey)) { if (event.key === 'Escape') { closeMenu(); closeSpotifyPopup(); } return; }
   const key = event.key.toLowerCase();
   if (key === 't') { event.preventDefault(); if (event.shiftKey) reopenClosedTab(); else addTab(); }
   else if (key === 'l') { event.preventDefault(); $('#address').focus(); $('#address').select(); }
@@ -311,6 +372,7 @@ listen('cherry:page-load', event => {
   if (event.payload.label === state.active) { updateLoadButton(); if (event.payload.state === 'finished') $('#homeView').classList.add('hidden'); }
 });
 applyAppearance(); updateAdBlockButton(); renderTabs(); renderBookmarks(); renderHome(); invoke('app_version').then(version => state.version = version).catch(() => {});
+const savedSpotifyEmbed = localStorage.getItem('cherry.spotifyEmbed'); if (savedSpotifyEmbed) { $('#spotifyLink').value = savedSpotifyEmbed; loadSpotifyEmbed(savedSpotifyEmbed); }
 const savedTabs = readList('cherry.session').filter(tab => typeof tab.url === 'string' && /^https?:\/\//i.test(tab.url)).slice(-12);
 if (savedTabs.length) { for (const tab of savedTabs) await addTab(tab.url, false, false); }
 else await addTab();
