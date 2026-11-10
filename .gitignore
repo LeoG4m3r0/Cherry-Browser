@@ -1,0 +1,16 @@
+# Build output
+/dist/
+/src-tauri/target/
+/work/
+
+# Dependencies
+/node_modules/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
