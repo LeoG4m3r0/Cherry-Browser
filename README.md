@@ -1,4 +1,4 @@
-# Cherry Browser — Alpha 0.4.3
+# Cherry Browser — Alpha 0.4.12
 
 Navegador para Windows com interface em Rust + Tauri e páginas em abas do WebView2 do Microsoft Edge (Chromium). Este projeto está em **ALPHA**.
 
@@ -11,12 +11,15 @@ Execute `Cherry-Browser-Setup.exe`. O instalador abre uma tela gráfica nativa d
 - Abas dinâmicas, restauração das últimas abas comuns, navegação, favoritos (com remoção pela lista), histórico e downloads
 - Indicador de carregamento com botão para interromper a página
 - Atalhos Ctrl+T, Ctrl+Shift+T, Ctrl+Shift+N, Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+R, Ctrl+L e Ctrl+W
-- Mini-player Spotify flutuante: cole link ou URI de faixa, álbum, playlist, artista ou podcast para tocar sem fechar a aba
+- Mini-player Spotify flutuante para links públicos sem iniciar um fluxo obrigatório de login
+- Speedtest da Ookla abre como uma página nativa em nova guia
+- DNS sobre HTTPS: Cloudflare por padrão, Google Public DNS, Quad9 ou DNS da rede (reinício necessário)
 - Atalhos de Favoritos e bloqueador de anúncios junto ao botão de downloads
 - Verificador de versões Alpha em Releases do GitHub, com acesso direto às versões publicadas
+- Se uma atualização estiver disponível, o Sobre oferece o download direto do instalador; o instalador deve ser executado manualmente
 - Google, Microsoft Bing (Edge), Brave Search e DuckDuckGo
-- Bloqueio básico de anúncios e rastreadores conhecidos, com controle nas configurações
-- Personalização de tema claro, escuro ou noturno e capa de cerejas
+- Bloqueio nativo de requisições de domínios conhecidos de anúncios e rastreadores, com ocultação de elementos comuns e controle imediato
+- Personalização de tema claro, escuro ou noturno, capa de cerejas e escolha de inicialização (nova guia ou restaurar sessão)
 - Modo privado e atalhos Ctrl+T, Ctrl+L e Ctrl+W
 - Menu que se sobrepõe à página sem deslocá-la; ao fechar, restaura a área completa da aba
 - Instalador gráfico por usuário, sem janela de terminal

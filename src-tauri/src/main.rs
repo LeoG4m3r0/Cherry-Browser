@@ -4,44 +4,101 @@ use serde_json::json;
 use tauri::{Emitter, Manager, WebviewUrl};
 use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent, WebviewBuilder};
 use tauri::{LogicalPosition, LogicalSize};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::collections::HashMap;
 #[cfg(windows)]
-use webview2_com::{AcceleratorKeyPressedEventHandler, Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_KEY_EVENT_KIND, COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, ICoreWebView2AcceleratorKeyPressedEventArgs}};
+use webview2_com::{AcceleratorKeyPressedEventHandler, WebResourceRequestedEventHandler, Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_KEY_EVENT_KIND, COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2AcceleratorKeyPressedEventArgs}};
 #[cfg(windows)]
 use windows::Win32::Foundation::{HWND, RECT};
 #[cfg(windows)]
+use windows::core::{HSTRING, PWSTR};
+#[cfg(windows)]
 use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRectRgn, DeleteObject, SetWindowRgn, RGN_DIFF};
 #[cfg(windows)]
-use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetClientRect, GetWindow, GetWindowRect, IsWindowVisible, GW_CHILD, GW_HWNDNEXT};
+use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetClientRect, GetWindow, GetWindowRect, IsWindowVisible, SetWindowPos, HWND_TOP, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, GW_CHILD, GW_HWNDNEXT};
 #[cfg(windows)]
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_L, VK_N, VK_R, VK_SHIFT, VK_T, VK_TAB, VK_W};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 static CLEARER_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+static AD_BLOCK_STATES: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
+const DNS_SETTINGS_FILE: &str = "browser-settings.json";
+
+fn dns_settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path().app_data_dir().map(|dir| dir.join(DNS_SETTINGS_FILE)).map_err(|e| e.to_string())
+}
+
+fn read_dns_provider(path: &std::path::Path) -> String {
+    std::fs::read(path).ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|settings| settings.get("dnsProvider").and_then(|value| value.as_str()).map(str::to_owned))
+        .filter(|provider| matches!(provider.as_str(), "cloudflare" | "google" | "quad9" | "system"))
+        .unwrap_or_else(|| "cloudflare".into())
+}
+
+fn apply_dns_provider(provider: &str) {
+    let dns_flags = match provider {
+        "google" => "--dns-over-https-mode=secure --dns-over-https-templates=https://dns.google/dns-query{?dns}",
+        "quad9" => "--dns-over-https-mode=secure --dns-over-https-templates=https://dns.quad9.net/dns-query{?dns}",
+        "system" => "--dns-over-https-mode=off",
+        _ => "--dns-over-https-mode=secure --dns-over-https-templates=https://cloudflare-dns.com/dns-query{?dns}",
+    };
+    let inherited = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
+    let arguments = if inherited.trim().is_empty() { dns_flags.to_owned() }
+        else { format!("{} {}", inherited.trim(), dns_flags) };
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", arguments);
+}
+
+#[tauri::command]
+fn get_dns_provider(app: tauri::AppHandle) -> Result<String, String> {
+    Ok(read_dns_provider(&dns_settings_path(&app)?))
+}
+
+#[tauri::command]
+fn set_dns_provider(app: tauri::AppHandle, provider: String) -> Result<bool, String> {
+    if !matches!(provider.as_str(), "cloudflare" | "google" | "quad9" | "system") {
+        return Err("Provedor DNS inválido".into());
+    }
+    let path = dns_settings_path(&app)?;
+    let changed = read_dns_provider(&path) != provider;
+    let parent = path.parent().ok_or_else(|| "Pasta de configurações inválida".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    let contents = serde_json::to_vec_pretty(&json!({ "dnsProvider": provider })).map_err(|e| e.to_string())?;
+    std::fs::write(path, contents).map_err(|e| e.to_string())?;
+    Ok(changed)
+}
+
+#[tauri::command]
+fn restart_app(app: tauri::AppHandle) { app.restart(); }
+
+#[cfg(windows)]
+fn raise_spotify_webview(view: &tauri::Webview) -> Result<(), String> {
+    view.with_webview(|platform| unsafe {
+        let mut hwnd = HWND::default();
+        if platform.controller().ParentWindow(&mut hwnd).is_ok() && !hwnd.0.is_null() {
+            let _ = SetWindowPos(hwnd, Some(HWND_TOP), 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+        }
+    }).map_err(|e| e.to_string())
+}
+
+#[cfg(not(windows))]
+fn raise_spotify_webview(_view: &tauri::Webview) -> Result<(), String> { Ok(()) }
 
 const AD_BLOCK_SCRIPT: &str = r#"(() => {
-  const blocked = /(?:doubleclick|googlesyndication|googleadservices|adservice\.google|adnxs|taboola|outbrain|criteo|adroll|advertising\.com|adsystem|amazon-adsystem|adsrvr|pubmatic|rubiconproject|smartadserver|scorecardresearch|openx\.net|adform\.net)/i;
-  const resourceSelector = 'iframe, img, script, video, source, link[rel="preload"]';
+  const resourceSelector = 'iframe, img, script, video, source, link[rel="preload"], link[rel="stylesheet"]';
   const styleId = '__cherry_ad_block_css';
   window.__cherryAdBlockEnabled = __CHERRY_AD_BLOCK__;
   if (window.__cherryAdBlockInstalled) return;
   window.__cherryAdBlockInstalled = true;
-  const shouldBlock = value => window.__cherryAdBlockEnabled && blocked.test(String(value || ''));
-  const nativeFetch = window.fetch?.bind(window);
-  if (nativeFetch) window.fetch = (input, init) => {
-    const url = typeof input === 'string' ? input : input?.url;
-    return shouldBlock(url) ? Promise.resolve(new Response(null, { status: 204 })) : nativeFetch(input, init);
-  };
-  const nativeOpen = XMLHttpRequest.prototype.open;
-  const nativeSend = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method, url, ...rest) { this.__cherryBlocked = shouldBlock(url); return nativeOpen.call(this, method, url, ...rest); };
-  XMLHttpRequest.prototype.send = function(...args) { if (this.__cherryBlocked) { try { this.abort(); } catch {} return; } return nativeSend.apply(this, args); };
+  const shouldBlock = () => window.__cherryAdBlockEnabled;
   const scan = root => {
     if (!window.__cherryAdBlockEnabled) return;
     const elements = [];
     if (root.matches?.(resourceSelector)) elements.push(root);
     root.querySelectorAll?.(resourceSelector).forEach(element => elements.push(element));
-    for (const element of elements) if (shouldBlock(element.getAttribute('src'))) element.remove();
+    for (const element of elements) if (shouldBlock() && /(?:doubleclick|googlesyndication|googleadservices|adservice|adnxs|taboola|outbrain|criteo|adroll|adsystem|amazon-adsystem|adsrvr|pubmatic|rubiconproject|smartadserver|scorecardresearch|openx|adform)/i.test(element.getAttribute('src') || element.getAttribute('href') || '')) element.remove();
   };
   const syncBlocker = () => {
     const root = document.documentElement;
@@ -51,7 +108,7 @@ const AD_BLOCK_SCRIPT: &str = r#"(() => {
       if (!style) {
         const element = document.createElement('style');
         element.id = styleId;
-        element.textContent = '[id*=ad-container i],[class*=ad-container i],[id^=google_ads i],[class^=google-ad i],[data-ad],[data-ad-slot],.adsbygoogle,.ad-banner,.advertisement{display:none!important}';
+        element.textContent = '[id*=ad-container i],[class*=ad-container i],[id^=google_ads i],[class^=google-ad i],[data-ad],[data-ad-slot],[data-advertisement],.adsbygoogle,.ad-banner,.advertisement,.ad-unit,.ad-wrapper,.sponsored-content,.sponsored-post,.sponsor-banner,.promo-ad,.taboola,.outbrain,.trc_rbox,.mgid{display:none!important}';
         root.appendChild(element);
       }
       scan(root);
@@ -83,6 +140,80 @@ const AD_BLOCK_SCRIPT: &str = r#"(() => {
   if (document.documentElement) syncBlocker();
   else document.addEventListener('DOMContentLoaded', syncBlocker, { once: true });
 })();"#;
+
+// Native WebView2 filtering prevents known ad and tracking requests from being downloaded.
+const AD_HOSTS: &[&str] = &[
+    "doubleclick.net", "googlesyndication.com", "googleadservices.com", "adservice.google.com",
+    "adnxs.com", "adsrvr.org", "adform.net", "adroll.com", "advertising.com",
+    "amazon-adsystem.com", "bidswitch.net", "bluekai.com", "casalemedia.com", "contextweb.com",
+    "criteo.com", "criteo.net", "demdex.net", "eyeota.net",
+    "hotjar.com", "imasdk.googleapis.com", "imrworldwide.com", "improvedigital.com",
+    "liadm.com", "lijit.com", "mathtag.com", "media.net", "moatads.com", "openx.net",
+    "outbrain.com", "pippio.com", "pubmatic.com", "quantserve.com", "scorecardresearch.com",
+    "serving-sys.com", "sharethrough.com", "simpli.fi", "smartadserver.com", "taboola.com",
+    "tapad.com", "teads.tv", "thetradedesk.com", "tidaltv.com", "tremorhub.com",
+    "triplelift.com", "yieldmo.com", "zedo.com", "zemanta.com", "doubleverify.com",
+    "ad.gt", "adnxs-simple.com", "adsafeprotected.com", "adsymptotic.com", "agkn.com",
+    "appnexus.com", "bannersnack.com", "betrad.com", "chartbeat.com", "clicktale.net",
+    "dotomi.com", "exelator.com", "flashtalking.com", "gumgum.com", "innovid.com",
+    "krxd.net", "nexac.com", "parsely.com", "rlcdn.com", "sascdn.com", "spotxchange.com",
+    "turn.com", "undertone.com", "verizonmedia.com"
+];
+
+fn is_ad_host(host: &str) -> bool {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    AD_HOSTS.iter().any(|entry| {
+        let domain = *entry;
+        host == domain || host.strip_suffix(domain).map_or(false, |prefix| prefix.ends_with('.'))
+    })
+}
+
+#[cfg(windows)]
+fn install_ad_blocker(view: &tauri::Webview, label: &str, enabled: bool) -> Result<(), String> {
+    let state = Arc::new(AtomicBool::new(enabled));
+    AD_BLOCK_STATES.get_or_init(|| Mutex::new(HashMap::new()))
+        .lock().map_err(|_| "Estado do bloqueador indisponível".to_string())?
+        .insert(label.to_owned(), state.clone());
+    let install_result = Arc::new(Mutex::new(None));
+    let result_slot = install_result.clone();
+    view.with_webview(move |platform| {
+        let result = unsafe { (|| -> Result<(), String> {
+            let controller = platform.controller();
+            let core = controller.CoreWebView2().map_err(|e| e.to_string())?;
+            let env = platform.environment();
+            let filter = HSTRING::from("*");
+            core.AddWebResourceRequestedFilter(&filter, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL)
+                .map_err(|e| e.to_string())?;
+            let handler = WebResourceRequestedEventHandler::create(Box::new(move |_sender, args| {
+                let Some(args) = args else { return Ok(()); };
+                if !state.load(Ordering::Relaxed) { return Ok(()); }
+                let Ok(request) = args.Request() else { return Ok(()); };
+                let mut uri = PWSTR::null();
+                if request.Uri(&mut uri).is_err() { return Ok(()); }
+                let Ok(uri) = uri.to_string() else { return Ok(()); };
+                let blocked = tauri::Url::parse(&uri).ok()
+                    .and_then(|url| url.host_str().map(is_ad_host)).unwrap_or(false);
+                if blocked {
+                    let status = HSTRING::from("No Content");
+                    let headers = HSTRING::from("Cache-Control: no-store\r\n");
+                    if let Ok(response) = env.CreateWebResourceResponse(None, 204, &status, &headers) {
+                        let _ = args.SetResponse(&response);
+                    }
+                }
+                Ok(())
+            }));
+            let mut token = 0i64;
+            core.add_WebResourceRequested(&handler, &mut token).map_err(|e| e.to_string())
+        })() };
+        if let Ok(mut slot) = result_slot.lock() { *slot = Some(result); }
+    }).map_err(|e| e.to_string())?;
+    let configured = install_result.lock().map_err(|_| "Estado do bloqueador indisponível".to_string())?
+        .take().ok_or_else(|| "Não foi possível configurar o bloqueador nativo".to_string())?;
+    configured
+}
+
+#[cfg(not(windows))]
+fn install_ad_blocker(_view: &tauri::Webview, _label: &str, _enabled: bool) -> Result<(), String> { Ok(()) }
 
 fn emit_shell<R: tauri::Runtime, P: serde::Serialize + Clone>(app: &tauri::AppHandle<R>, event: &str, payload: P) {
     let _ = app.emit_to("shell", event, payload);
@@ -195,6 +326,7 @@ async fn create_page(
     let view = window
         .add_child(builder, LogicalPosition::new(x, y), LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
+    install_ad_blocker(&view, &label, ad_block)?;
     #[cfg(windows)]
     install_shortcuts(&view, app.clone());
     if !visible {
@@ -262,6 +394,11 @@ fn page_action(
         "stop" => view.eval("window.stop()").map_err(|e| e.to_string()),
         "adblock" => {
             let enabled = url.as_deref() == Some("on");
+            if let Some(states) = AD_BLOCK_STATES.get() {
+                if let Ok(states) = states.lock() {
+                    if let Some(state) = states.get(&label) { state.store(enabled, Ordering::Relaxed); }
+                }
+            }
             view.eval(&format!("window.__cherrySetAdBlockEnabled?.({enabled})" )).map_err(|e| e.to_string())
         }
         _ => Err("Ação desconhecida".into()),
@@ -273,6 +410,53 @@ fn set_page_bounds(app: tauri::AppHandle, label: String, x: f64, y: f64, width: 
     let view = app.get_webview(&label).ok_or_else(|| "Aba não encontrada".to_string())?;
     view.set_position(LogicalPosition::new(x, y)).map_err(|e| e.to_string())?;
     view.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn open_spotify_embed(app: tauri::AppHandle, url: String, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+    let target = url.parse::<tauri::Url>().map_err(|e| e.to_string())?;
+    if target.scheme() != "https" || target.host_str() != Some("open.spotify.com") || !target.path().starts_with("/embed/") {
+        return Err("O player só pode abrir embeds oficiais do Spotify".into());
+    }
+    let position = LogicalPosition::new(x, y);
+    let size = LogicalSize::new(width.max(1.0), height.max(1.0));
+    if let Some(view) = app.get_webview("spotify_embed") {
+        view.set_position(position).map_err(|e| e.to_string())?;
+        view.set_size(size).map_err(|e| e.to_string())?;
+        let current = view.url().map(|current| current.to_string()).unwrap_or_default();
+        if current != target.as_str() { view.navigate(target).map_err(|e| e.to_string())?; }
+        view.show().map_err(|e| e.to_string())?;
+        view.set_focus().map_err(|e| e.to_string())?;
+        raise_spotify_webview(&view)?;
+        return Ok(());
+    }
+    let window = app.get_window("main").ok_or_else(|| "Janela principal não encontrada".to_string())?;
+    let app_load = app.clone();
+    let builder = WebviewBuilder::new("spotify_embed", WebviewUrl::External(target))
+        .incognito(false)
+        .on_page_load(move |_view, payload| {
+            let state = match payload.event() {
+                PageLoadEvent::Started => "started",
+                PageLoadEvent::Finished => "finished",
+            };
+            emit_shell(&app_load, "cherry:spotify-load", json!({ "url": payload.url().as_str(), "state": state }));
+        })
+        .on_navigation(|next| {
+            let host = next.host_str().unwrap_or_default().to_ascii_lowercase();
+            next.scheme() == "https" && (host == "open.spotify.com" || host == "spotify.com" || host.ends_with(".spotify.com"))
+        });
+    let view = window.add_child(builder, position, size).map_err(|e| e.to_string())?;
+    view.show().map_err(|e| e.to_string())?;
+    view.set_focus().map_err(|e| e.to_string())?;
+    raise_spotify_webview(&view)
+}
+
+#[tauri::command]
+fn set_spotify_embed_visible(app: tauri::AppHandle, visible: bool) -> Result<(), String> {
+    if let Some(view) = app.get_webview("spotify_embed") {
+        if visible { view.show() } else { view.hide() }.map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -347,6 +531,9 @@ fn set_page_cutout(app: tauri::AppHandle, x: f64, y: f64, width: f64, height: f6
 
 #[tauri::command]
 fn close_page(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(states) = AD_BLOCK_STATES.get() {
+        if let Ok(mut states) = states.lock() { states.remove(&label); }
+    }
     if let Some(view) = app.get_webview(&label) {
         view.close().map_err(|e| e.to_string())?;
     }
@@ -384,6 +571,10 @@ fn app_version() -> &'static str {
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
+            let dns_provider = dns_settings_path(app.handle())
+                .map(|settings_path| read_dns_provider(&settings_path))
+                .unwrap_or_else(|_| "cloudflare".into());
+            apply_dns_provider(&dns_provider);
             let window = tauri::Window::builder(app, "main")
                 .title("Cherry Browser")
                 .inner_size(1280.0, 850.0)
@@ -393,7 +584,7 @@ fn main() {
             window.add_child(shell, LogicalPosition::new(0.0, 0.0), LogicalSize::new(1280.0, 850.0))?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![create_page, page_action, set_page_bounds, set_page_visible, focus_page, set_page_cutout, close_page, clear_page_data, app_version])
+        .invoke_handler(tauri::generate_handler![create_page, page_action, set_page_bounds, set_page_visible, focus_page, set_page_cutout, open_spotify_embed, set_spotify_embed_visible, close_page, clear_page_data, app_version, get_dns_provider, set_dns_provider, restart_app])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar o Cherry Browser");
 }

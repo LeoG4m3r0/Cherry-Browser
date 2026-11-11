@@ -1,4 +1,47 @@
+## 0.4.12-alpha — 2026-11-10
+
+- O bloqueador agora interrompe requisições conhecidas de anúncios e rastreadores no WebView2 antes do download, com liga/desliga imediato por aba e regras visuais ampliadas.
+
+## 0.4.11-alpha — 2026-11-10
+
+- Restaurado o atalho direto para o Speedtest da Ookla em uma nova guia.
+
+## 0.4.10-alpha — 2026-11-10
+
+- Removido o botão que iniciava o fluxo de login do Spotify; links públicos podem ser abertos sem entrar, e a conta só é usada se o próprio Spotify solicitar.
+
+## 0.4.9-alpha — 2026-11-10
+
+- O atalho de teste de velocidade agora pesquisa usando o mecanismo padrão escolhido nas configurações, incluindo Brave Search.
+
+## 0.4.8-alpha — 2026-11-10
+
+- Corrigida a ordem visual do WebView nativo do Spotify para o player aparecer sobre a página.
+- O mini-player informa quando o embed termina de carregar e continua usando o perfil normal do Cherry.
+- Adicionado Speedtest da Ookla como uma página nativa em uma nova guia.
+- Adicionada escolha de DNS sobre HTTPS: Cloudflare por padrão, Google, Quad9 ou DNS da rede. A troca pode ser aplicada reiniciando o navegador.
+
+## 0.4.7-alpha — 2026-11-10
+
+- O Spotify agora abre em uma WebView própria sobre o mini-player, no perfil compartilhado do Cherry, sem depender de cookies de iframe de terceiros.
+- O mini-player reutiliza a sessão iniciada no Web Player do Spotify em uma guia do Cherry.
+
+## 0.4.6-alpha — 2026-11-10
+
+- Ao abrir o mini-player, o item Spotify salvo é carregado novamente para usar uma sessão autenticada no Cherry.
+- O login é feito no site oficial em uma guia do navegador; não exige Client ID nem importa credenciais de outros navegadores.
+
+## 0.4.5-alpha — 2026-11-10
+
+- O mini-player do Spotify ganhou um botão para abrir o Spotify e entrar na conta em uma nova guia.
+- Personalização permite escolher entre iniciar com uma nova guia ou restaurar as guias da sessão anterior.
+
 # Histórico de versões
+
+## 0.4.4-alpha — 2026-11-10
+
+- Em Sobre, o verificador agora oferece o download direto do instalador quando encontra uma versão pública mais recente.
+- O estado diferencia uma versão instalada ainda não publicada de uma versão pública atualizada.
 
 ## 0.4.3-alpha — 2026-11-10
 

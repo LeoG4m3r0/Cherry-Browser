@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const readList = key => { const value = read(key); return Array.isArray(value) ? value : []; };
-const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.2', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
+const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.12', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
 const engines = {
   google: query => `https://www.google.com/search?q=${query}`,
   bing: query => `https://www.bing.com/search?q=${query}`,
@@ -99,16 +99,28 @@ async function updateMenuCutout() {
 }
 async function updateSpotifyCutout() {
   const tab = active(), popup = $('#spotifyPopup');
-  if (popup.classList.contains('hidden') || !tab?.ready) return;
-  const rect = popup.getBoundingClientRect(), pageTop = $('#chrome').getBoundingClientRect().bottom;
-  const left = Math.max(0, rect.left), top = Math.max(rect.top, pageTop);
-  const right = Math.min(window.innerWidth, rect.right), bottom = Math.min(window.innerHeight, rect.bottom);
-  if (right <= left || bottom <= top) return;
-  await invoke('set_page_cutout', { x: left, y: top - pageTop, width: right - left, height: bottom - top, enabled: true });
-  state.spotifyCutout = true;
+  if (popup.classList.contains('hidden')) return;
+  await invoke('set_spotify_embed_visible', { visible: false });
+  if (tab?.ready) {
+    const rect = popup.getBoundingClientRect(), pageTop = $('#chrome').getBoundingClientRect().bottom;
+    const left = Math.max(0, rect.left), top = Math.max(rect.top, pageTop);
+    const right = Math.min(window.innerWidth, rect.right), bottom = Math.min(window.innerHeight, rect.bottom);
+    if (right <= left || bottom <= top) return;
+    await invoke('set_page_cutout', { x: left, y: top - pageTop, width: right - left, height: bottom - top, enabled: true });
+    state.spotifyCutout = true;
+  }
+  const savedEmbed = localStorage.getItem('cherry.spotifyEmbed');
+  const target = savedEmbed && spotifyEmbedUrl(savedEmbed);
+  if (!target) return;
+  const player = $('#spotifyPlayer').getBoundingClientRect();
+  await invoke('open_spotify_embed', {
+    url: `${target.embed}?utm_source=generator&theme=${document.documentElement.dataset.theme === 'light' ? '1' : '0'}`,
+    x: player.left, y: player.top, width: player.width, height: player.height
+  });
 }
 async function closeSpotifyPopup(restorePage = true) {
   const popup = $('#spotifyPopup'), wasOpen = !popup.classList.contains('hidden');
+  await invoke('set_spotify_embed_visible', { visible: false });
   if (state.spotifyCutout && active()?.ready) {
     await invoke('set_page_cutout', { x: 0, y: 0, width: 0, height: 0, enabled: false });
     state.spotifyCutout = false;
@@ -122,6 +134,8 @@ async function toggleSpotifyPopup() {
   await closeMenu(false);
   if (state.panel && state.active) await activate(state.active);
   $('#spotifyPopup').classList.remove('hidden'); $('#spotifyBtn').setAttribute('aria-expanded', 'true');
+  const savedEmbed = localStorage.getItem('cherry.spotifyEmbed');
+  if (savedEmbed) $('#spotifyStatus').textContent = 'Spotify carregando no perfil do Cherry…';
   await new Promise(requestAnimationFrame); await updateSpotifyCutout();
 }
 function spotifyEmbedUrl(input) {
@@ -139,14 +153,11 @@ function spotifyEmbedUrl(input) {
   } catch { return null; }
 }
 function loadSpotifyEmbed(input) {
-  const target = spotifyEmbedUrl(input), status = $('#spotifyStatus'), player = $('#spotifyPlayer');
+  const target = spotifyEmbedUrl(input), status = $('#spotifyStatus');
   if (!target) { status.textContent = 'Link inválido. Use um link open.spotify.com de faixa, álbum, playlist, artista ou podcast.'; return; }
-  const iframe = document.createElement('iframe');
-  iframe.title = 'Player incorporado do Spotify'; iframe.loading = 'lazy'; iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-  iframe.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'; iframe.allowFullscreen = true;
-  iframe.src = `${target.embed}?utm_source=generator&theme=${document.documentElement.dataset.theme === 'light' ? '1' : '0'}`;
-  player.replaceChildren(iframe); status.textContent = 'Player carregado. A reprodução é controlada pelo Spotify.';
+  status.textContent = 'Spotify carregando no perfil do Cherry…';
   localStorage.setItem('cherry.spotifyEmbed', target.embed);
+  if (!$('#spotifyPopup').classList.contains('hidden')) requestAnimationFrame(() => updateSpotifyCutout().catch(error => toast(error?.message || 'Não foi possível abrir o player Spotify')));
 }
 async function activate(id) {
   const tab = state.tabs.find(item => item.id === id); if (!tab) return;
@@ -271,17 +282,21 @@ async function showPanel(which) {
   if (which === 'history' || which === 'bookmarks' || which === 'downloads') {
     const key = { history: 'cherry.history', bookmarks: 'cherry.bookmarks', downloads: 'cherry.downloads' }[which]; addListItems(body, readList(key), which);
   } else if (which === 'settings') {
-    body.innerHTML = `<label>Pesquisa padrão<select id="searchEngine"><option value="google">Google</option><option value="bing">Microsoft Bing (Edge)</option><option value="brave">Brave Search</option><option value="duckduckgo">DuckDuckGo</option></select></label><label class="toggle"><input id="adBlockToggle" type="checkbox"> Bloquear anúncios e rastreadores conhecidos</label><label class="toggle"><input id="showBookmarks" type="checkbox"> Mostrar favoritos abaixo da barra</label><button id="saveSettings" class="primary">Salvar configurações</button><p>O bloqueio é básico e baseado em domínios e elementos comuns. Favoritos e histórico ficam neste dispositivo.</p>`;
-    $('#searchEngine').value = localStorage.getItem('cherry.engine') || 'google'; $('#adBlockToggle').checked = adBlockEnabled(); $('#showBookmarks').checked = localStorage.getItem('cherry.showBookmarks') !== 'false';
+    body.innerHTML = `<label>Pesquisa padrão<select id="searchEngine"><option value="google">Google</option><option value="bing">Microsoft Bing (Edge)</option><option value="brave">Brave Search</option><option value="duckduckgo">DuckDuckGo</option></select></label><label>DNS do navegador<select id="dnsProvider"><option value="cloudflare">Cloudflare (padrão)</option><option value="google">Google Public DNS</option><option value="quad9">Quad9</option><option value="system">DNS da rede</option></select></label><p>O DNS seguro usa DNS sobre HTTPS no WebView2. A mudança passa a valer após reiniciar o Cherry.</p><label class="toggle"><input id="adBlockToggle" type="checkbox"> Bloquear anúncios e rastreadores conhecidos</label><label class="toggle"><input id="showBookmarks" type="checkbox"> Mostrar favoritos abaixo da barra</label><button id="saveSettings" class="primary">Salvar configurações</button><button id="restartDns" class="primary hidden">Reiniciar para aplicar o DNS</button><p>O bloqueador intercepta requisições conhecidas de anúncios e rastreadores no WebView2 e também oculta espaços publicitários comuns. Algumas páginas podem exigir que você desligue o bloqueio nelas. Favoritos e histórico ficam neste dispositivo.</p>`;
+    $('#searchEngine').value = localStorage.getItem('cherry.engine') || 'google'; $('#dnsProvider').value = await invoke('get_dns_provider'); $('#adBlockToggle').checked = adBlockEnabled(); $('#showBookmarks').checked = localStorage.getItem('cherry.showBookmarks') !== 'false';
     $('#saveSettings').onclick = async () => {
       localStorage.setItem('cherry.engine', $('#searchEngine').value); localStorage.setItem('cherry.showBookmarks', $('#showBookmarks').checked); localStorage.setItem('cherry.adBlock', $('#adBlockToggle').checked);
+      let dnsChanged = false;
+      try { dnsChanged = await invoke('set_dns_provider', { provider: $('#dnsProvider').value }); }
+      catch (error) { toast(error?.message || 'Não foi possível salvar o DNS'); return; }
       await Promise.all(state.tabs.filter(tab => tab.ready).map(tab => invoke('page_action', { label: tab.id, action: 'adblock', url: $('#adBlockToggle').checked ? 'on' : 'off' })));
-      applyAppearance(); updateAdBlockButton(); toast('Configurações salvas');
+      applyAppearance(); updateAdBlockButton(); $('#restartDns').classList.toggle('hidden', !dnsChanged); toast(dnsChanged ? 'DNS salvo. Reinicie para aplicar.' : 'Configurações salvas');
     };
+    $('#restartDns').onclick = () => invoke('restart_app');
   } else if (which === 'personalize') {
-    body.innerHTML = `<div class="appearance-preview"><img src="/assets/cherry-cover.svg" alt="Capa de cerejas"><span>Prévia da página inicial</span></div><label>Tema de cores<select id="themeChoice"><option value="cherry">Cereja</option><option value="light">Claro</option><option value="night">Noite</option></select></label><label class="toggle"><input id="coverToggle" type="checkbox"> Mostrar capa de cerejas na página inicial</label><button id="saveAppearance" class="primary">Aplicar personalização</button>`;
-    $('#themeChoice').value = localStorage.getItem('cherry.theme') || 'cherry'; $('#coverToggle').checked = localStorage.getItem('cherry.cover') !== 'false';
-    $('#saveAppearance').onclick = () => { localStorage.setItem('cherry.theme', $('#themeChoice').value); localStorage.setItem('cherry.cover', $('#coverToggle').checked); applyAppearance(); toast('Personalização aplicada'); };
+    body.innerHTML = `<div class="appearance-preview"><img src="/assets/cherry-cover.svg" alt="Capa de cerejas"><span>Prévia da página inicial</span></div><label>Tema de cores<select id="themeChoice"><option value="cherry">Cereja</option><option value="light">Claro</option><option value="night">Noite</option></select></label><label class="toggle"><input id="coverToggle" type="checkbox"> Mostrar capa de cerejas na página inicial</label><label>Ao iniciar o navegador<select id="startupChoice"><option value="new">Abrir uma nova guia</option><option value="restore">Manter as guias da sessão anterior</option></select></label><button id="saveAppearance" class="primary">Aplicar personalização</button>`;
+    $('#themeChoice').value = localStorage.getItem('cherry.theme') || 'cherry'; $('#coverToggle').checked = localStorage.getItem('cherry.cover') !== 'false'; $('#startupChoice').value = localStorage.getItem('cherry.startup') || 'restore';
+    $('#saveAppearance').onclick = () => { localStorage.setItem('cherry.theme', $('#themeChoice').value); localStorage.setItem('cherry.cover', $('#coverToggle').checked); localStorage.setItem('cherry.startup', $('#startupChoice').value); applyAppearance(); toast('Personalização aplicada'); };
   } else if (which === 'about') {
     body.innerHTML = `<img class="about-mark" src="/assets/cherry-logo.svg" alt="Logo de cereja"><h3>Cherry Browser</h3><p>by Leo e Vini</p><p><span class="alpha-badge">ALPHA</span> · Versão ${state.version}</p><p>Navegador leve para Windows usando o WebView2 do Microsoft Edge.</p><p>Interface própria com tema de cerejas.</p><button id="checkUpdates" class="primary">↻ Verificar atualizações</button><p id="updateStatus" class="update-status" aria-live="polite">Consulta as versões Alpha publicadas no GitHub.</p><button id="openRelease" class="primary hidden">Ver versão no GitHub</button>`;
     $('#checkUpdates').onclick = async event => {
@@ -299,10 +314,15 @@ async function showPanel(which) {
         const latest = valid.sort((a, b) => compareVersions(b.tag_name, a.tag_name))[0];
         if (!latest) { status.textContent = `Você está na versão ${state.version}-alpha. Ainda não há versões publicadas para baixar.`; return; }
         const latestVersion = latest.tag_name.replace(/^v/, '').split('-')[0];
-        if (compareVersions(latestVersion, state.version) > 0) {
+        const comparison = compareVersions(latestVersion, state.version);
+        if (comparison > 0) {
+          const installer = latest.assets?.find(asset => asset.name === 'Cherry-Browser-Setup.exe' && asset.state === 'uploaded');
           status.textContent = `A versão ${latest.tag_name} está disponível (instalada: ${state.version}-alpha).`;
-          state.latestRelease = latest.html_url; releaseButton.classList.remove('hidden');
-        } else status.textContent = `Você está atualizado: ${state.version}-alpha.`;
+          state.latestRelease = installer?.browser_download_url || latest.html_url;
+          releaseButton.textContent = installer ? 'Baixar instalador' : 'Ver versão no GitHub';
+          releaseButton.classList.remove('hidden');
+        } else if (comparison < 0) status.textContent = `A versão local ${state.version}-alpha ainda não foi publicada. A versão pública mais recente é ${latest.tag_name}.`;
+        else status.textContent = `Você está atualizado: ${state.version}-alpha.`;
       } catch { status.textContent = 'Não foi possível consultar o GitHub. Confira sua conexão e tente de novo.'; }
       finally { button.disabled = false; }
     };
@@ -321,6 +341,7 @@ $('#reload').onclick = () => active()?.ready ? invoke('page_action', { label: st
 $('#home').onclick = async () => { const tab = active(); if (tab) { await closeMenu(false); state.panel = null; $('#panelHost').classList.add('hidden'); if (tab.ready) await invoke('close_page', { label: tab.id }); tab.ready = false; tab.url = ''; tab.title = 'Nova aba'; $('#address').value = ''; $('#homeView').classList.remove('hidden'); renderTabs(); } };
 $('#bookmark').onclick = () => { const tab = active(); if (!tab?.url) return toast('Abra uma página primeiro'); const items = readList('cherry.bookmarks'), index = items.findIndex(item => canonicalUrl(item.url) === canonicalUrl(tab.url)); if (index >= 0) { items.splice(index, 1); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito removido'); return; } items.unshift({ url: tab.url, title: tab.title || tab.url }); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito salvo'); };
 $('#downloads').onclick = () => showPanel('downloads'); $('#favorites').onclick = () => showPanel('bookmarks'); $('#adBlockBtn').onclick = toggleAdBlock; $('#spotifyBtn').onclick = toggleSpotifyPopup; $('#spotifyClose').onclick = () => closeSpotifyPopup(); $('#menuBtn').onclick = () => toggleMenu(); $('#menuBackdrop').onclick = () => closeMenu();
+$('#speedTest').onclick = async () => { await closeMenu(false); await addTab('https://www.speedtest.net/'); };
 $('#spotifyForm').addEventListener('submit', event => { event.preventDefault(); loadSpotifyEmbed($('#spotifyLink').value); });
 document.addEventListener('pointerdown', event => {
   const popup = $('#spotifyPopup');
@@ -371,9 +392,12 @@ listen('cherry:page-load', event => {
   else state.loadingTabs.delete(event.payload.label);
   if (event.payload.label === state.active) { updateLoadButton(); if (event.payload.state === 'finished') $('#homeView').classList.add('hidden'); }
 });
+listen('cherry:spotify-load', event => {
+  if (!$('#spotifyPopup').classList.contains('hidden') && event.payload.state === 'finished') $('#spotifyStatus').textContent = 'Player carregado. A sessão depende do login salvo no perfil do Cherry.';
+});
 applyAppearance(); updateAdBlockButton(); renderTabs(); renderBookmarks(); renderHome(); invoke('app_version').then(version => state.version = version).catch(() => {});
 const savedSpotifyEmbed = localStorage.getItem('cherry.spotifyEmbed'); if (savedSpotifyEmbed) { $('#spotifyLink').value = savedSpotifyEmbed; loadSpotifyEmbed(savedSpotifyEmbed); }
-const savedTabs = readList('cherry.session').filter(tab => typeof tab.url === 'string' && /^https?:\/\//i.test(tab.url)).slice(-12);
+const savedTabs = localStorage.getItem('cherry.startup') === 'new' ? [] : readList('cherry.session').filter(tab => typeof tab.url === 'string' && /^https?:\/\//i.test(tab.url)).slice(-12);
 if (savedTabs.length) { for (const tab of savedTabs) await addTab(tab.url, false, false); }
 else await addTab();
 
