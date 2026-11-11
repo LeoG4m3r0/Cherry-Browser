@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const readList = key => { const value = read(key); return Array.isArray(value) ? value : []; };
-const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.12', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
+const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.13', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
 const engines = {
   google: query => `https://www.google.com/search?q=${query}`,
   bing: query => `https://www.bing.com/search?q=${query}`,
@@ -302,6 +302,7 @@ async function showPanel(which) {
     $('#checkUpdates').onclick = async event => {
       const button = event.currentTarget, status = $('#updateStatus');
       const releaseButton = $('#openRelease');
+      let updateDownloadStarted = false;
       button.disabled = true; releaseButton.classList.add('hidden'); status.textContent = 'Consultando as versões públicas…';
       try {
         state.version = await invoke('app_version');
@@ -318,13 +319,22 @@ async function showPanel(which) {
         if (comparison > 0) {
           const installer = latest.assets?.find(asset => asset.name === 'Cherry-Browser-Setup.exe' && asset.state === 'uploaded');
           status.textContent = `A versão ${latest.tag_name} está disponível (instalada: ${state.version}-alpha).`;
-          state.latestRelease = installer?.browser_download_url || latest.html_url;
-          releaseButton.textContent = installer ? 'Baixar instalador' : 'Ver versão no GitHub';
-          releaseButton.classList.remove('hidden');
+          const verifiedAsset = installer?.browser_download_url && /^sha256:[a-f0-9]{64}$/i.test(installer.digest || '');
+          if (verifiedAsset) {
+            status.textContent = `Nova versão ${latest.tag_name} encontrada. Preparando o download seguro e a instalação automática…`;
+            await invoke('download_update', { url: installer.browser_download_url, sha256: installer.digest, version: latestVersion });
+            updateDownloadStarted = true;
+            status.textContent = `Baixando a versão ${latestVersion}. O Cherry instalará e reabrirá automaticamente quando terminar.`;
+          } else {
+            status.textContent += ' Não foi possível verificar a assinatura SHA-256 do instalador; abra o release para atualizar manualmente.';
+            state.latestRelease = latest.html_url;
+            releaseButton.textContent = 'Ver versão no GitHub';
+            releaseButton.classList.remove('hidden');
+          }
         } else if (comparison < 0) status.textContent = `A versão local ${state.version}-alpha ainda não foi publicada. A versão pública mais recente é ${latest.tag_name}.`;
         else status.textContent = `Você está atualizado: ${state.version}-alpha.`;
-      } catch { status.textContent = 'Não foi possível consultar o GitHub. Confira sua conexão e tente de novo.'; }
-      finally { button.disabled = false; }
+      } catch (error) { status.textContent = error?.message || 'Não foi possível consultar ou iniciar a atualização. Confira sua conexão e tente de novo.'; }
+      finally { button.disabled = updateDownloadStarted; }
     };
     $('#openRelease').onclick = () => state.latestRelease && navigate(state.latestRelease);
   } else {
@@ -387,6 +397,7 @@ listen('cherry:navigation', event => { const tab = state.tabs.find(item => item.
 listen('cherry:shortcut', event => { if (event.payload.action === 'new-tab') addTab(); else if (event.payload.action === 'restore-tab') reopenClosedTab(); else if (event.payload.action === 'focus-address') { $('#address').focus(); $('#address').select(); } else if (event.payload.action === 'close-tab' && active()) closeTab(state.active); else if (event.payload.action === 'reload' && active()?.ready) invoke('page_action', { label: state.active, action: 'reload' }); else if (event.payload.action === 'private-tab') addTab('', true); else if (event.payload.action === 'next-tab') switchTab(event.payload.reverse ? -1 : 1); });
 listen('cherry:new-window', event => { const parent = state.tabs.find(tab => tab.id === event.payload.label); addTab(event.payload.url, !!parent?.private); });
 listen('cherry:download', event => { const download = event.payload, items = readList('cherry.downloads'), existing = items.find(item => item.url === download.url && item.state === 'started'); if (existing) { existing.state = download.state; existing.path = download.path || existing.path; } else items.unshift({ url: download.url, path: download.path, state: download.state, at: Date.now() }); if (!download.incognito) save('cherry.downloads', items.slice(0, 500)); if (download.state === 'finished') toast('Download concluído'); });
+listen('cherry:update-status', event => { const status = $('#updateStatus'); if (status) status.textContent = event.payload.message; if (event.payload.state === 'failed') { const button = $('#checkUpdates'); if (button) button.disabled = false; } });
 listen('cherry:page-load', event => {
   if (event.payload.state === 'started') state.loadingTabs.add(event.payload.label);
   else state.loadingTabs.delete(event.payload.label);

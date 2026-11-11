@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager, WebviewUrl};
 use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent, WebviewBuilder};
 use tauri::{LogicalPosition, LogicalSize};
@@ -8,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::collections::HashMap;
+use std::process::Command;
 #[cfg(windows)]
 use webview2_com::{AcceleratorKeyPressedEventHandler, WebResourceRequestedEventHandler, Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_KEY_EVENT_KIND, COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2AcceleratorKeyPressedEventArgs}};
 #[cfg(windows)]
@@ -568,6 +570,112 @@ fn app_version() -> &'static str {
     APP_VERSION
 }
 
+fn emit_update_status(app: &tauri::AppHandle, state: &str, message: &str) {
+    let _ = app.emit_to("shell", "cherry:update-status", json!({ "state": state, "message": message }));
+}
+
+#[tauri::command]
+fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: String) -> Result<(), String> {
+    let target = url.parse::<tauri::Url>().map_err(|e| format!("URL de atualização inválida: {e}"))?;
+    let file_name = target.path_segments().and_then(|mut segments| segments.next_back()).unwrap_or_default();
+    if target.scheme() != "https" || target.host_str() != Some("github.com")
+        || !target.path().contains("/releases/download/") || file_name != "Cherry-Browser-Setup.exe" {
+        return Err("O instalador precisa vir de um release HTTPS oficial do Cherry Browser.".into());
+    }
+    let expected_hash = sha256.strip_prefix("sha256:").unwrap_or(&sha256).to_ascii_lowercase();
+    if expected_hash.len() != 64 || !expected_hash.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return Err("O GitHub não forneceu um SHA-256 válido para verificar o instalador.".into());
+    }
+    if version.is_empty() || !version.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '-') {
+        return Err("Versão de atualização inválida.".into());
+    }
+    if app.get_webview("update_download").is_some() {
+        return Err("Já existe uma atualização em andamento.".into());
+    }
+
+    let window = app.get_window("main").ok_or_else(|| "Janela principal não encontrada".to_string())?;
+    let update_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("updates");
+    std::fs::create_dir_all(&update_dir).map_err(|e| e.to_string())?;
+    let installer_path = update_dir.join(format!("Cherry-Browser-Setup-{version}.exe"));
+    if installer_path.exists() { std::fs::remove_file(&installer_path).map_err(|e| e.to_string())?; }
+
+    let app_download = app.clone();
+    let app_finished = app.clone();
+    let download_seen = Arc::new(AtomicBool::new(false));
+    let callback_download_seen = download_seen.clone();
+    let expected_url = url.clone();
+    let installed_version = version.clone();
+    let builder = WebviewBuilder::new("update_download", WebviewUrl::External(target))
+        .on_download(move |_view, event| match event {
+            DownloadEvent::Requested { url, destination } => {
+                let host = url.host_str().unwrap_or_default();
+                let requested_name = url.path_segments().and_then(|mut segments| segments.next_back()).unwrap_or_default();
+                let expected_host = host == "github.com" || host == "release-assets.githubusercontent.com" || host == "objects.githubusercontent.com";
+                let matches_asset = url.as_str() == expected_url || (expected_host && requested_name == "Cherry-Browser-Setup.exe");
+                if !matches_asset {
+                    emit_update_status(&app_download, "failed", "A origem do arquivo baixado não corresponde ao instalador do release.");
+                    return false;
+                }
+                callback_download_seen.store(true, Ordering::Relaxed);
+                *destination = installer_path.clone();
+                emit_update_status(&app_download, "downloading", &format!("Baixando a versão {installed_version}…"));
+                true
+            }
+            DownloadEvent::Finished { path, success, .. } => {
+                let Some(path) = path else {
+                    emit_update_status(&app_download, "failed", "O WebView2 não informou onde salvou o instalador.");
+                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
+                    return true;
+                };
+                if !success {
+                    let _ = std::fs::remove_file(&path);
+                    emit_update_status(&app_download, "failed", "O download da atualização falhou. Tente novamente.");
+                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
+                    return true;
+                }
+                let bytes = match std::fs::read(&path) {
+                    Ok(bytes) => bytes,
+                    Err(error) => {
+                        emit_update_status(&app_download, "failed", &format!("Não foi possível verificar o instalador: {error}"));
+                        if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
+                        return true;
+                    }
+                };
+                let actual_hash = format!("{:x}", Sha256::digest(&bytes));
+                if actual_hash != expected_hash {
+                    let _ = std::fs::remove_file(&path);
+                    emit_update_status(&app_download, "failed", "A verificação SHA-256 falhou; o instalador foi descartado.");
+                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
+                    return true;
+                }
+                match Command::new(&path).arg("--apply-update").arg(std::process::id().to_string()).spawn() {
+                    Ok(_) => {
+                        emit_update_status(&app_finished, "installing", &format!("Instalando a versão {installed_version}. O Cherry será reaberto ao concluir…"));
+                        app_finished.exit(0);
+                    }
+                    Err(error) => {
+                        emit_update_status(&app_download, "failed", &format!("O download foi verificado, mas o instalador não iniciou: {error}"));
+                        if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
+                    }
+                }
+                true
+            }
+            _ => true,
+        });
+    let download_view = window.add_child(builder, LogicalPosition::new(0.0, 0.0), LogicalSize::new(1.0, 1.0))
+        .map_err(|e| e.to_string())?;
+    download_view.hide().map_err(|e| e.to_string())?;
+    let timeout_app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(90));
+        if !download_seen.load(Ordering::Relaxed) {
+            emit_update_status(&timeout_app, "failed", "O GitHub não iniciou o download do instalador. Verifique sua conexão e tente novamente.");
+            if let Some(view) = timeout_app.get_webview("update_download") { let _ = view.close(); }
+        }
+    });
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -584,7 +692,7 @@ fn main() {
             window.add_child(shell, LogicalPosition::new(0.0, 0.0), LogicalSize::new(1280.0, 850.0))?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![create_page, page_action, set_page_bounds, set_page_visible, focus_page, set_page_cutout, open_spotify_embed, set_spotify_embed_visible, close_page, clear_page_data, app_version, get_dns_provider, set_dns_provider, restart_app])
+        .invoke_handler(tauri::generate_handler![create_page, page_action, set_page_bounds, set_page_visible, focus_page, set_page_cutout, open_spotify_embed, set_spotify_embed_visible, close_page, clear_page_data, app_version, download_update, get_dns_provider, set_dns_provider, restart_app])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar o Cherry Browser");
 }

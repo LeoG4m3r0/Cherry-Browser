@@ -16,7 +16,7 @@ Execute `Cherry-Browser-Setup.exe`. O instalador abre uma tela gráfica nativa d
 - DNS sobre HTTPS: Cloudflare por padrão, Google Public DNS, Quad9 ou DNS da rede (reinício necessário)
 - Atalhos de Favoritos e bloqueador de anúncios junto ao botão de downloads
 - Verificador de versões Alpha em Releases do GitHub, com acesso direto às versões publicadas
-- Se uma atualização estiver disponível, o Sobre oferece o download direto do instalador; o instalador deve ser executado manualmente
+- O verificador em Sobre baixa e verifica o instalador de um release público e aplica a atualização automaticamente, reabrindo o navegador
 - Google, Microsoft Bing (Edge), Brave Search e DuckDuckGo
 - Bloqueio nativo de requisições de domínios conhecidos de anúncios e rastreadores, com ocultação de elementos comuns e controle imediato
 - Personalização de tema claro, escuro ou noturno, capa de cerejas e escolha de inicialização (nova guia ou restaurar sessão)

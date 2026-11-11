@@ -133,9 +133,63 @@ internal sealed class CherrySetup : Form
     [STAThread]
     private static void Main()
     {
+        var arguments = Environment.GetCommandLineArgs();
+        int parentPid;
+        if (arguments.Length == 3 && arguments[1] == "--apply-update" && int.TryParse(arguments[2], out parentPid))
+        {
+            ApplyUpdate(parentPid);
+            return;
+        }
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new CherrySetup());
+    }
+
+    private static void ApplyUpdate(int parentPid)
+    {
+        try
+        {
+            try { using (var parent = Process.GetProcessById(parentPid)) parent.WaitForExit(); }
+            catch (ArgumentException) { /* The browser may have exited before this helper started. */ }
+            var installFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Cherry Browser");
+            Directory.CreateDirectory(installFolder);
+            var targetPath = Path.Combine(installFolder, "Cherry-Browser.exe");
+            var stagingPath = targetPath + ".update";
+            using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("CherryBrowser.exe"))
+            {
+                if (input == null) throw new InvalidOperationException("O instalador não contém os arquivos do Cherry Browser.");
+                using (var output = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None)) input.CopyTo(output);
+            }
+            if (File.Exists(targetPath)) File.Replace(stagingPath, targetPath, null);
+            else File.Move(stagingPath, targetPath);
+            try
+            {
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType != null)
+                {
+                    object shell = Activator.CreateInstance(shellType);
+                    try
+                    {
+                        string startMenu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Cherry Browser.lnk");
+                        object shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { startMenu });
+                        Type linkType = shortcut.GetType();
+                        linkType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
+                        linkType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { installFolder });
+                        linkType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Cherry Browser para Windows" });
+                        linkType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+                        Marshal.ReleaseComObject(shortcut);
+                    }
+                    finally { Marshal.ReleaseComObject(shell); }
+                }
+            }
+            catch { /* A shortcut issue must not prevent reopening the updated browser. */ }
+            Process.Start(new ProcessStartInfo(targetPath) { UseShellExecute = true, WorkingDirectory = installFolder });
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show("A atualização automática não pôde ser concluída. O Cherry Browser não foi publicado nem alterado por esta tentativa; baixe o instalador e execute-o manualmente.\n\n" + error.Message,
+                "Cherry Browser", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 }
 
