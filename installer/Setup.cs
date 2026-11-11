@@ -97,11 +97,8 @@ internal sealed class CherrySetup : Form
             Directory.CreateDirectory(installFolder);
             targetPath = Path.Combine(installFolder, "Cherry-Browser.exe");
             status.Text = "Copiando o aplicativo…"; progress.Value = 48; Refresh(); Application.DoEvents();
-            using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("CherryBrowser.exe"))
-            {
-                if (input == null) throw new InvalidOperationException("O instalador não contém os arquivos do Cherry Browser.");
-                using (var output = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None)) input.CopyTo(output);
-            }
+            CopyEmbeddedResource("CherryBrowser.exe", targetPath);
+            CopyEmbeddedResource("WebView2Loader.dll", Path.Combine(installFolder, "WebView2Loader.dll"));
             status.Text = "Criando os atalhos…"; progress.Value = 78; Refresh(); Application.DoEvents();
             CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Cherry Browser.lnk"));
             if (desktopShortcut.Checked) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Cherry Browser.lnk"));
@@ -130,6 +127,15 @@ internal sealed class CherrySetup : Form
         Marshal.ReleaseComObject(shortcut); Marshal.ReleaseComObject(shell);
     }
 
+    private static void CopyEmbeddedResource(string resourceName, string destination)
+    {
+        using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+        {
+            if (input == null) throw new InvalidOperationException("O instalador não contém a dependência " + resourceName + ".");
+            using (var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None)) input.CopyTo(output);
+        }
+    }
+
     [STAThread]
     private static void Main()
     {
@@ -155,11 +161,12 @@ internal sealed class CherrySetup : Form
             Directory.CreateDirectory(installFolder);
             var targetPath = Path.Combine(installFolder, "Cherry-Browser.exe");
             var stagingPath = targetPath + ".update";
-            using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("CherryBrowser.exe"))
-            {
-                if (input == null) throw new InvalidOperationException("O instalador não contém os arquivos do Cherry Browser.");
-                using (var output = new FileStream(stagingPath, FileMode.Create, FileAccess.Write, FileShare.None)) input.CopyTo(output);
-            }
+            CopyEmbeddedResource("CherryBrowser.exe", stagingPath);
+            var loaderPath = Path.Combine(installFolder, "WebView2Loader.dll");
+            var loaderStagingPath = loaderPath + ".update";
+            CopyEmbeddedResource("WebView2Loader.dll", loaderStagingPath);
+            if (File.Exists(loaderPath)) File.Replace(loaderStagingPath, loaderPath, null);
+            else File.Move(loaderStagingPath, loaderPath);
             if (File.Exists(targetPath)) File.Replace(stagingPath, targetPath, null);
             else File.Move(stagingPath, targetPath);
             try

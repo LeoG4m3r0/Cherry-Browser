@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const read = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const readList = key => { const value = read(key); return Array.isArray(value) ? value : []; };
-const state = { tabs: [], active: null, seq: 0, private: false, version: '0.4.13', panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
+const state = { tabs: [], active: null, seq: 0, version: null, panel: null, menuCutout: false, spotifyCutout: false, latestRelease: null, closedTabs: [], loadingTabs: new Set() };
 const engines = {
   google: query => `https://www.google.com/search?q=${query}`,
   bing: query => `https://www.bing.com/search?q=${query}`,
@@ -73,12 +73,18 @@ function updateAdBlockButton() {
 }
 async function toggleAdBlock() {
   const enabled = !adBlockEnabled();
-  localStorage.setItem('cherry.adBlock', String(enabled));
-  updateAdBlockButton();
+  const button = $('#adBlockBtn');
+  button.disabled = true;
   try {
     await Promise.all(state.tabs.filter(tab => tab.ready).map(tab => invoke('page_action', { label: tab.id, action: 'adblock', url: enabled ? 'on' : 'off' })));
+    localStorage.setItem('cherry.adBlock', String(enabled));
+    updateAdBlockButton();
     toast(enabled ? 'Bloqueador ativado' : 'Bloqueador desativado');
-  } catch (error) { toast(error?.message || 'Não foi possível atualizar o bloqueador'); }
+  } catch (error) {
+    toast(error?.message || 'Não foi possível atualizar o bloqueador');
+  } finally {
+    button.disabled = false;
+  }
 }
 async function setBounds(tab) {
   if (!tab?.ready) return;
@@ -163,7 +169,7 @@ async function activate(id) {
   const tab = state.tabs.find(item => item.id === id); if (!tab) return;
   await closeSpotifyPopup(false);
   await closeMenu(false);
-  state.active = id; state.private = tab.private; state.panel = null;
+  state.active = id; state.panel = null;
   $('#panelHost').classList.add('hidden'); $('#homeView').classList.toggle('hidden', !!tab.url);
   $('#address').value = tab.url || ''; $('#privacyMark').textContent = tab.private ? '◉' : '◈'; $('#privacyMark').classList.toggle('private', tab.private);
   updateBookmarkButton();
@@ -285,12 +291,24 @@ async function showPanel(which) {
     body.innerHTML = `<label>Pesquisa padrão<select id="searchEngine"><option value="google">Google</option><option value="bing">Microsoft Bing (Edge)</option><option value="brave">Brave Search</option><option value="duckduckgo">DuckDuckGo</option></select></label><label>DNS do navegador<select id="dnsProvider"><option value="cloudflare">Cloudflare (padrão)</option><option value="google">Google Public DNS</option><option value="quad9">Quad9</option><option value="system">DNS da rede</option></select></label><p>O DNS seguro usa DNS sobre HTTPS no WebView2. A mudança passa a valer após reiniciar o Cherry.</p><label class="toggle"><input id="adBlockToggle" type="checkbox"> Bloquear anúncios e rastreadores conhecidos</label><label class="toggle"><input id="showBookmarks" type="checkbox"> Mostrar favoritos abaixo da barra</label><button id="saveSettings" class="primary">Salvar configurações</button><button id="restartDns" class="primary hidden">Reiniciar para aplicar o DNS</button><p>O bloqueador intercepta requisições conhecidas de anúncios e rastreadores no WebView2 e também oculta espaços publicitários comuns. Algumas páginas podem exigir que você desligue o bloqueio nelas. Favoritos e histórico ficam neste dispositivo.</p>`;
     $('#searchEngine').value = localStorage.getItem('cherry.engine') || 'google'; $('#dnsProvider').value = await invoke('get_dns_provider'); $('#adBlockToggle').checked = adBlockEnabled(); $('#showBookmarks').checked = localStorage.getItem('cherry.showBookmarks') !== 'false';
     $('#saveSettings').onclick = async () => {
-      localStorage.setItem('cherry.engine', $('#searchEngine').value); localStorage.setItem('cherry.showBookmarks', $('#showBookmarks').checked); localStorage.setItem('cherry.adBlock', $('#adBlockToggle').checked);
+      const previousAdBlock = adBlockEnabled();
+      const nextAdBlock = $('#adBlockToggle').checked;
       let dnsChanged = false;
-      try { dnsChanged = await invoke('set_dns_provider', { provider: $('#dnsProvider').value }); }
-      catch (error) { toast(error?.message || 'Não foi possível salvar o DNS'); return; }
-      await Promise.all(state.tabs.filter(tab => tab.ready).map(tab => invoke('page_action', { label: tab.id, action: 'adblock', url: $('#adBlockToggle').checked ? 'on' : 'off' })));
-      applyAppearance(); updateAdBlockButton(); $('#restartDns').classList.toggle('hidden', !dnsChanged); toast(dnsChanged ? 'DNS salvo. Reinicie para aplicar.' : 'Configurações salvas');
+      try {
+        await Promise.all(state.tabs.filter(tab => tab.ready).map(tab => invoke('page_action', { label: tab.id, action: 'adblock', url: nextAdBlock ? 'on' : 'off' })));
+        dnsChanged = await invoke('set_dns_provider', { provider: $('#dnsProvider').value });
+        localStorage.setItem('cherry.engine', $('#searchEngine').value);
+        localStorage.setItem('cherry.showBookmarks', String($('#showBookmarks').checked));
+        localStorage.setItem('cherry.adBlock', String(nextAdBlock));
+        applyAppearance(); updateAdBlockButton(); $('#restartDns').classList.toggle('hidden', !dnsChanged);
+        toast(dnsChanged ? 'DNS salvo. Reinicie para aplicar.' : 'Configurações salvas');
+      } catch (error) {
+        if (nextAdBlock !== previousAdBlock) {
+          await Promise.allSettled(state.tabs.filter(tab => tab.ready).map(tab => invoke('page_action', { label: tab.id, action: 'adblock', url: previousAdBlock ? 'on' : 'off' })));
+        }
+        $('#adBlockToggle').checked = previousAdBlock;
+        toast(error?.message || 'Não foi possível salvar as configurações');
+      }
     };
     $('#restartDns').onclick = () => invoke('restart_app');
   } else if (which === 'personalize') {
@@ -298,6 +316,7 @@ async function showPanel(which) {
     $('#themeChoice').value = localStorage.getItem('cherry.theme') || 'cherry'; $('#coverToggle').checked = localStorage.getItem('cherry.cover') !== 'false'; $('#startupChoice').value = localStorage.getItem('cherry.startup') || 'restore';
     $('#saveAppearance').onclick = () => { localStorage.setItem('cherry.theme', $('#themeChoice').value); localStorage.setItem('cherry.cover', $('#coverToggle').checked); localStorage.setItem('cherry.startup', $('#startupChoice').value); applyAppearance(); toast('Personalização aplicada'); };
   } else if (which === 'about') {
+    if (!state.version) state.version = await invoke('app_version').catch(() => 'desconhecida');
     body.innerHTML = `<img class="about-mark" src="/assets/cherry-logo.svg" alt="Logo de cereja"><h3>Cherry Browser</h3><p>by Leo e Vini</p><p><span class="alpha-badge">ALPHA</span> · Versão ${state.version}</p><p>Navegador leve para Windows usando o WebView2 do Microsoft Edge.</p><p>Interface própria com tema de cerejas.</p><button id="checkUpdates" class="primary">↻ Verificar atualizações</button><p id="updateStatus" class="update-status" aria-live="polite">Consulta as versões Alpha publicadas no GitHub.</p><button id="openRelease" class="primary hidden">Ver versão no GitHub</button>`;
     $('#checkUpdates').onclick = async event => {
       const button = event.currentTarget, status = $('#updateStatus');
@@ -311,10 +330,10 @@ async function showPanel(which) {
         });
         if (!response.ok) throw new Error(`GitHub respondeu ${response.status}`);
         const releases = await response.json();
-        const valid = releases.filter(release => !release.draft && /^v?\d+\.\d+\.\d+/.test(release.tag_name || ''));
+        const valid = releases.filter(release => !release.draft && /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(release.tag_name || ''));
         const latest = valid.sort((a, b) => compareVersions(b.tag_name, a.tag_name))[0];
         if (!latest) { status.textContent = `Você está na versão ${state.version}-alpha. Ainda não há versões publicadas para baixar.`; return; }
-        const latestVersion = latest.tag_name.replace(/^v/, '').split('-')[0];
+        const latestVersion = latest.tag_name.replace(/^v/, '').split(/[-+]/, 1)[0];
         const comparison = compareVersions(latestVersion, state.version);
         if (comparison > 0) {
           const installer = latest.assets?.find(asset => asset.name === 'Cherry-Browser-Setup.exe' && asset.state === 'uploaded');
@@ -322,7 +341,7 @@ async function showPanel(which) {
           const verifiedAsset = installer?.browser_download_url && /^sha256:[a-f0-9]{64}$/i.test(installer.digest || '');
           if (verifiedAsset) {
             status.textContent = `Nova versão ${latest.tag_name} encontrada. Preparando o download seguro e a instalação automática…`;
-            await invoke('download_update', { url: installer.browser_download_url, sha256: installer.digest, version: latestVersion });
+            await invoke('download_update', { url: installer.browser_download_url, sha256: installer.digest, version: latestVersion, releaseTag: latest.tag_name });
             updateDownloadStarted = true;
             status.textContent = `Baixando a versão ${latestVersion}. O Cherry instalará e reabrirá automaticamente quando terminar.`;
           } else {
@@ -348,7 +367,20 @@ $('#homeSearch').addEventListener('keydown', event => { if (event.key === 'Enter
 $('#back').onclick = () => active()?.ready && invoke('page_action', { label: state.active, action: 'back' });
 $('#forward').onclick = () => active()?.ready && invoke('page_action', { label: state.active, action: 'forward' });
 $('#reload').onclick = () => active()?.ready ? invoke('page_action', { label: state.active, action: state.loadingTabs.has(state.active) ? 'stop' : 'reload' }) : activate(state.active);
-$('#home').onclick = async () => { const tab = active(); if (tab) { await closeMenu(false); state.panel = null; $('#panelHost').classList.add('hidden'); if (tab.ready) await invoke('close_page', { label: tab.id }); tab.ready = false; tab.url = ''; tab.title = 'Nova aba'; $('#address').value = ''; $('#homeView').classList.remove('hidden'); renderTabs(); } };
+$('#home').onclick = async () => {
+  const tab = active();
+  if (!tab) return;
+  await closeMenu(false);
+  state.panel = null;
+  $('#panelHost').classList.add('hidden');
+  if (tab.ready) await invoke('close_page', { label: tab.id });
+  state.loadingTabs.delete(tab.id);
+  tab.ready = false; tab.url = ''; tab.title = 'Nova aba';
+  $('#address').value = '';
+  $('#homeView').classList.remove('hidden');
+  updateBookmarkButton(); updateLoadButton();
+  persistSession(); renderTabs();
+};
 $('#bookmark').onclick = () => { const tab = active(); if (!tab?.url) return toast('Abra uma página primeiro'); const items = readList('cherry.bookmarks'), index = items.findIndex(item => canonicalUrl(item.url) === canonicalUrl(tab.url)); if (index >= 0) { items.splice(index, 1); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito removido'); return; } items.unshift({ url: tab.url, title: tab.title || tab.url }); save('cherry.bookmarks', items); renderBookmarks(); renderHome(); updateBookmarkButton(); toast('Favorito salvo'); };
 $('#downloads').onclick = () => showPanel('downloads'); $('#favorites').onclick = () => showPanel('bookmarks'); $('#adBlockBtn').onclick = toggleAdBlock; $('#spotifyBtn').onclick = toggleSpotifyPopup; $('#spotifyClose').onclick = () => closeSpotifyPopup(); $('#menuBtn').onclick = () => toggleMenu(); $('#menuBackdrop').onclick = () => closeMenu();
 $('#speedTest').onclick = async () => { await closeMenu(false); await addTab('https://www.speedtest.net/'); };
@@ -367,9 +399,21 @@ addEventListener('resize', () => {
   }, 70);
 });
 function compareVersions(left, right) {
-  const a = String(left).replace(/^[vV]/, '').split('.').map(part => parseInt(part, 10) || 0);
-  const b = String(right).replace(/^[vV]/, '').split('.').map(part => parseInt(part, 10) || 0);
-  for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0);
+  const parse = value => {
+    const match = String(value).replace(/^[vV]/, '').match(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/);
+    return match ? { numbers: match.slice(1, 4).map(Number), prerelease: match[4]?.split('.') || [] } : { numbers: [0, 0, 0], prerelease: [] };
+  };
+  const a = parse(left), b = parse(right);
+  for (let i = 0; i < 3; i++) if (a.numbers[i] !== b.numbers[i]) return a.numbers[i] - b.numbers[i];
+  if (!a.prerelease.length || !b.prerelease.length) return Number(!a.prerelease.length) - Number(!b.prerelease.length);
+  for (let i = 0; i < Math.max(a.prerelease.length, b.prerelease.length); i++) {
+    const partA = a.prerelease[i], partB = b.prerelease[i];
+    if (partA === undefined || partB === undefined) return partA === undefined ? -1 : 1;
+    const numberA = /^\d+$/.test(partA), numberB = /^\d+$/.test(partB);
+    if (numberA && numberB && Number(partA) !== Number(partB)) return Number(partA) - Number(partB);
+    if (numberA !== numberB) return numberA ? -1 : 1;
+    if (partA !== partB) return partA < partB ? -1 : 1;
+  }
   return 0;
 }
 function switchTab(direction) {
@@ -392,20 +436,64 @@ document.addEventListener('keydown', event => {
   else if (key === 'tab') { event.preventDefault(); switchTab(event.shiftKey ? -1 : 1); }
   else if (key === 'n' && event.shiftKey) { event.preventDefault(); addTab('', true); }
 });
-listen('cherry:title', event => { const tab = state.tabs.find(item => item.id === event.payload.label); if (tab) { tab.title = event.payload.title || tab.url; renderTabs(); renderBookmarks(); } });
-listen('cherry:navigation', event => { const tab = state.tabs.find(item => item.id === event.payload.label); if (tab) { tab.url = event.payload.url; if (tab.id === state.active) { $('#address').value = tab.url; updateBookmarkButton(); } if (!tab.private) persistSession(); } });
-listen('cherry:shortcut', event => { if (event.payload.action === 'new-tab') addTab(); else if (event.payload.action === 'restore-tab') reopenClosedTab(); else if (event.payload.action === 'focus-address') { $('#address').focus(); $('#address').select(); } else if (event.payload.action === 'close-tab' && active()) closeTab(state.active); else if (event.payload.action === 'reload' && active()?.ready) invoke('page_action', { label: state.active, action: 'reload' }); else if (event.payload.action === 'private-tab') addTab('', true); else if (event.payload.action === 'next-tab') switchTab(event.payload.reverse ? -1 : 1); });
-listen('cherry:new-window', event => { const parent = state.tabs.find(tab => tab.id === event.payload.label); addTab(event.payload.url, !!parent?.private); });
-listen('cherry:download', event => { const download = event.payload, items = readList('cherry.downloads'), existing = items.find(item => item.url === download.url && item.state === 'started'); if (existing) { existing.state = download.state; existing.path = download.path || existing.path; } else items.unshift({ url: download.url, path: download.path, state: download.state, at: Date.now() }); if (!download.incognito) save('cherry.downloads', items.slice(0, 500)); if (download.state === 'finished') toast('Download concluído'); });
-listen('cherry:update-status', event => { const status = $('#updateStatus'); if (status) status.textContent = event.payload.message; if (event.payload.state === 'failed') { const button = $('#checkUpdates'); if (button) button.disabled = false; } });
-listen('cherry:page-load', event => {
-  if (event.payload.state === 'started') state.loadingTabs.add(event.payload.label);
-  else state.loadingTabs.delete(event.payload.label);
-  if (event.payload.label === state.active) { updateLoadButton(); if (event.payload.state === 'finished') $('#homeView').classList.add('hidden'); }
-});
-listen('cherry:spotify-load', event => {
-  if (!$('#spotifyPopup').classList.contains('hidden') && event.payload.state === 'finished') $('#spotifyStatus').textContent = 'Player carregado. A sessão depende do login salvo no perfil do Cherry.';
-});
+await Promise.all([
+  listen('cherry:title', event => {
+    const tab = state.tabs.find(item => item.id === event.payload.label);
+    if (tab) { tab.title = event.payload.title || tab.url; renderTabs(); renderBookmarks(); }
+  }),
+  listen('cherry:navigation', event => {
+    const tab = state.tabs.find(item => item.id === event.payload.label);
+    if (!tab) return;
+    tab.url = event.payload.url;
+    if (tab.id === state.active) { $('#address').value = tab.url; updateBookmarkButton(); }
+    if (!tab.private) persistSession();
+  }),
+  listen('cherry:shortcut', event => {
+    const { action, reverse } = event.payload;
+    if (action === 'new-tab') addTab();
+    else if (action === 'restore-tab') reopenClosedTab();
+    else if (action === 'focus-address') { $('#address').focus(); $('#address').select(); }
+    else if (action === 'close-tab' && active()) closeTab(state.active);
+    else if (action === 'reload' && active()?.ready) invoke('page_action', { label: state.active, action: 'reload' });
+    else if (action === 'private-tab') addTab('', true);
+    else if (action === 'next-tab') switchTab(reverse ? -1 : 1);
+  }),
+  listen('cherry:new-window', event => {
+    const parent = state.tabs.find(tab => tab.id === event.payload.label);
+    addTab(event.payload.url, !!parent?.private);
+  }),
+  listen('cherry:download', event => {
+    const download = event.payload;
+    const items = readList('cherry.downloads');
+    const existing = items.find(item => item.url === download.url && item.state === 'started');
+    if (existing) { existing.state = download.state; existing.path = download.path || existing.path; }
+    else items.unshift({ url: download.url, path: download.path, state: download.state, at: Date.now() });
+    if (!download.incognito) save('cherry.downloads', items.slice(0, 500));
+    if (download.state === 'finished') toast('Download concluído');
+    else if (download.state === 'failed') toast(download.error || 'O download falhou');
+  }),
+  listen('cherry:update-status', event => {
+    const status = $('#updateStatus');
+    if (status) status.textContent = event.payload.message;
+    if (event.payload.state === 'failed') {
+      const button = $('#checkUpdates');
+      if (button) button.disabled = false;
+    }
+  }),
+  listen('cherry:page-load', event => {
+    if (event.payload.state === 'started') state.loadingTabs.add(event.payload.label);
+    else state.loadingTabs.delete(event.payload.label);
+    if (event.payload.label === state.active) {
+      updateLoadButton();
+      if (event.payload.state === 'finished') $('#homeView').classList.add('hidden');
+    }
+  }),
+  listen('cherry:spotify-load', event => {
+    if (!$('#spotifyPopup').classList.contains('hidden') && event.payload.state === 'finished') {
+      $('#spotifyStatus').textContent = 'Player carregado. A sessão depende do login salvo no perfil do Cherry.';
+    }
+  })
+]);
 applyAppearance(); updateAdBlockButton(); renderTabs(); renderBookmarks(); renderHome(); invoke('app_version').then(version => state.version = version).catch(() => {});
 const savedSpotifyEmbed = localStorage.getItem('cherry.spotifyEmbed'); if (savedSpotifyEmbed) { $('#spotifyLink').value = savedSpotifyEmbed; loadSpotifyEmbed(savedSpotifyEmbed); }
 const savedTabs = localStorage.getItem('cherry.startup') === 'new' ? [] : readList('cherry.session').filter(tab => typeof tab.url === 'string' && /^https?:\/\//i.test(tab.url)).slice(-12);

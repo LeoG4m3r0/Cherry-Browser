@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager, WebviewUrl};
 use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent, WebviewBuilder};
 use tauri::{LogicalPosition, LogicalSize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::collections::HashMap;
@@ -29,6 +29,37 @@ static CLEARER_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 static AD_BLOCK_STATES: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 const DNS_SETTINGS_FILE: &str = "browser-settings.json";
 
+fn safe_download_name(suggested: &str) -> String {
+    let segment = suggested.rsplit(|character| character == '/' || character == '\\').next().unwrap_or_default();
+    let cleaned: String = segment.chars().take(160)
+        .map(|character| if character.is_ascii_alphanumeric() || "._- ()".contains(character) { character } else { '_' })
+        .collect();
+    let cleaned = cleaned.trim_matches(|character| character == '.' || character == ' ');
+    if cleaned.is_empty() { return "download".into(); }
+    let stem = cleaned.split('.').next().unwrap_or_default().to_ascii_uppercase();
+    if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "COM1" | "COM2" | "COM3" | "COM4" | "COM5" | "COM6" | "COM7" | "COM8" | "COM9" | "LPT1" | "LPT2" | "LPT3" | "LPT4" | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9") {
+        format!("_{cleaned}")
+    } else {
+        cleaned.into()
+    }
+}
+
+fn unique_download_path(directory: &Path, file_name: &str) -> PathBuf {
+    let initial = directory.join(file_name);
+    if !initial.exists() { return initial; }
+    let (stem, extension) = file_name.rsplit_once('.').unwrap_or((file_name, ""));
+    let mut index = 1u32;
+    loop {
+        let candidate = if extension.is_empty() {
+            directory.join(format!("{stem} ({index})"))
+        } else {
+            directory.join(format!("{stem} ({index}).{extension}"))
+        };
+        if !candidate.exists() { return candidate; }
+        index = index.saturating_add(1);
+    }
+}
+
 fn dns_settings_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path().app_data_dir().map(|dir| dir.join(DNS_SETTINGS_FILE)).map_err(|e| e.to_string())
 }
@@ -48,7 +79,15 @@ fn apply_dns_provider(provider: &str) {
         "system" => "--dns-over-https-mode=off",
         _ => "--dns-over-https-mode=secure --dns-over-https-templates=https://cloudflare-dns.com/dns-query{?dns}",
     };
-    let inherited = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
+    let mut inherited = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
+    for old_dns_flags in [
+        "--dns-over-https-mode=off",
+        "--dns-over-https-mode=secure --dns-over-https-templates=https://cloudflare-dns.com/dns-query{?dns}",
+        "--dns-over-https-mode=secure --dns-over-https-templates=https://dns.google/dns-query{?dns}",
+        "--dns-over-https-mode=secure --dns-over-https-templates=https://dns.quad9.net/dns-query{?dns}",
+    ] {
+        inherited = inherited.replace(old_dns_flags, "");
+    }
     let arguments = if inherited.trim().is_empty() { dns_flags.to_owned() }
         else { format!("{} {}", inherited.trim(), dns_flags) };
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", arguments);
@@ -290,12 +329,21 @@ async fn create_page(
                         let base = app_download.path().download_dir()
                             .or_else(|_| app_download.path().app_data_dir())
                             .unwrap_or_else(|_| std::env::temp_dir());
-                        let _ = std::fs::create_dir_all(&base);
+                        if let Err(error) = std::fs::create_dir_all(&base) {
+                            emit_shell(&app_download, "cherry:download", json!({
+                                "label": label_download,
+                                "url": url.as_str(),
+                                "state": "failed",
+                                "incognito": incognito,
+                                "error": error.to_string()
+                            }));
+                            return false;
+                        }
                         let suggested = url.path_segments()
                             .and_then(|mut parts| parts.next_back())
                             .filter(|name| !name.is_empty())
                             .unwrap_or("download");
-                        *destination = base.join(suggested);
+                        *destination = unique_download_path(&base, &safe_download_name(suggested));
                     }
                     emit_shell(&app_download, "cherry:download", json!({
                         "label": label_download,
@@ -576,11 +624,27 @@ fn emit_update_status(app: &tauri::AppHandle, state: &str, message: &str) {
 }
 
 #[tauri::command]
-fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: String) -> Result<(), String> {
+fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: String, release_tag: String) -> Result<(), String> {
     let target = url.parse::<tauri::Url>().map_err(|e| format!("URL de atualização inválida: {e}"))?;
-    let file_name = target.path_segments().and_then(|mut segments| segments.next_back()).unwrap_or_default();
-    if target.scheme() != "https" || target.host_str() != Some("github.com")
-        || !target.path().contains("/releases/download/") || file_name != "Cherry-Browser-Setup.exe" {
+    let path: Vec<_> = target.path_segments().map(|segments| segments.collect()).unwrap_or_default();
+    let tag_without_prefix = release_tag.strip_prefix('v').unwrap_or(&release_tag);
+    let (tag_version, tag_suffix) = tag_without_prefix.split_once('-').unwrap_or((tag_without_prefix, ""));
+    let version_parts: Vec<_> = version.split('.').collect();
+    let valid_version = version_parts.len() == 3 && version_parts.iter().all(|part| !part.is_empty() && part.chars().all(|ch| ch.is_ascii_digit()));
+    let valid_tag = !release_tag.is_empty()
+        && release_tag.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '-')
+        && valid_version
+        && tag_version == version;
+    let valid_suffix = !tag_without_prefix.ends_with('-')
+        && (tag_suffix.is_empty() || tag_suffix.split('.').all(|part| !part.is_empty() && part.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-')));
+    let valid_path = path.len() == 6
+        && path[0] == "LeoG4m3r0"
+        && path[1] == "Cherry-Browser"
+        && path[2] == "releases"
+        && path[3] == "download"
+        && path[4] == release_tag
+        && path[5] == "Cherry-Browser-Setup.exe";
+    if target.scheme() != "https" || target.host_str() != Some("github.com") || !valid_path || !valid_tag || !valid_suffix {
         return Err("O instalador precisa vir de um release HTTPS oficial do Cherry Browser.".into());
     }
     let expected_hash = sha256.strip_prefix("sha256:").unwrap_or(&sha256).to_ascii_lowercase();
@@ -590,14 +654,10 @@ fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: 
     if version.is_empty() || !version.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '-') {
         return Err("Versão de atualização inválida.".into());
     }
-    if app.get_webview("update_download").is_some() {
-        return Err("Já existe uma atualização em andamento.".into());
-    }
     let update_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("updates");
     std::fs::create_dir_all(&update_dir).map_err(|e| e.to_string())?;
     let installer_path = update_dir.join(format!("Cherry-Browser-Setup-{version}.exe"));
     if installer_path.exists() { std::fs::remove_file(&installer_path).map_err(|e| e.to_string())?; }
-    let expected_hash = expected_hash.clone();
     let installed_version = version.clone();
     let requested_url = target.to_string();
     let worker_app = app.clone();
@@ -607,6 +667,15 @@ fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: 
             let client = reqwest::blocking::Client::builder()
                 .timeout(std::time::Duration::from_secs(600))
                 .user_agent(concat!("Cherry-Browser/", env!("CARGO_PKG_VERSION")))
+                .redirect(reqwest::redirect::Policy::custom(|attempt| {
+                    let url = attempt.url();
+                    let host = url.host_str().unwrap_or_default();
+                    if url.scheme() == "https" && matches!(host, "github.com" | "release-assets.githubusercontent.com" | "objects.githubusercontent.com") {
+                        attempt.follow()
+                    } else {
+                        attempt.stop()
+                    }
+                }))
                 .build().map_err(|e| format!("Não foi possível iniciar o download: {e}"))?;
             let mut response = client.get(requested_url).send()
                 .and_then(reqwest::blocking::Response::error_for_status)

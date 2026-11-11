@@ -1,10 +1,12 @@
-# Cherry Browser — Alpha 0.4.12
+# Cherry Browser — Alpha 0.4.15
 
 Navegador para Windows com interface em Rust + Tauri e páginas em abas do WebView2 do Microsoft Edge (Chromium). Este projeto está em **ALPHA**.
 
 ## Baixar e instalar
 
 Execute `Cherry-Browser-Setup.exe`. O instalador abre uma tela gráfica nativa do Windows, sem terminal, instala em `%LOCALAPPDATA%\Programs\Cherry Browser`, cria o atalho do Menu Iniciar e permite criar o atalho da Área de Trabalho. Não exige administrador. Clique em “Concluir e abrir” para iniciar o navegador. O Windows precisa do runtime WebView2 Evergreen.
+
+Para usar sem instalar, extraia `Cherry-Browser-0.4.15-alpha-portable.zip` em uma pasta e inicie `Cherry-Browser.exe`. O ZIP contém também a biblioteca `WebView2Loader.dll`, necessária ao WebView2.
 
 ## Recursos
 
@@ -30,7 +32,7 @@ O bloqueador usa regras básicas de domínios e elementos; não tem a cobertura 
 
 ## Versões e builds
 
-`VERSION.json` é a fonte da versão e do canal. O build confere se Cargo, Tauri e npm correspondem ao manifesto, compila o código-fonte atual, publica um executável com versão no nome, substitui os arquivos de release anteriores em `outputs` e preserva a pasta do código-fonte. O atualizador baixa o instalador nativamente via HTTPS, segue os redirecionamentos do GitHub, confere o SHA-256 e instala automaticamente.
+`VERSION.json` é a fonte da versão e do canal. O build confere se Cargo, Tauri e npm correspondem ao manifesto, compila o código-fonte atual, inclui `WebView2Loader.dll` no instalador e no pacote portátil, substitui os arquivos de release anteriores em `outputs` e preserva a pasta do código-fonte. O atualizador baixa o instalador nativamente via HTTPS, segue os redirecionamentos do GitHub, confere o SHA-256 e instala automaticamente.
 
 ## Recompilar no Windows
 

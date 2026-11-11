@@ -1,3 +1,13 @@
+## 0.4.15-alpha — 2026-11-10
+
+- Corrigido o empacotamento do WebView2Loader.dll: o instalador inclui a biblioteca e a instala junto ao navegador; o pacote portátil traz executável e DLL lado a lado.
+- Melhorados downloads com nomes seguros e sem sobrescrever arquivos existentes; corrigida a troca de DNS para evitar parâmetros antigos acumulados.
+- Ajustados o início dos eventos da interface, a comparação de versões e a limpeza da sessão ao voltar para a página inicial.
+
+## 0.4.14-alpha
+
+- Substituído o download oculto do WebView2 por download HTTPS nativo com redirecionamento do GitHub, limite de tamanho e verificação SHA-256 antes de iniciar o instalador.
+
 ## 0.4.13-alpha — 2026-11-11
 
 - O verificador agora baixa automaticamente o instalador do release, valida o SHA-256 publicado pelo GitHub, instala a atualização após fechar o Cherry e reabre o navegador.
@@ -138,10 +148,4 @@
 - Renomeado de Leve Browser para Cherry Browser.
 - Corrigido o carregamento da interface com Vite; os módulos Tauri agora são empacotados corretamente.
 - Adicionadas abas WebView2, navegação, busca, favoritos, histórico, downloads, modo privado e configurações.
-
-
-
-## 0.4.14-alpha
-
-- Substituído o download oculto do WebView2 por download HTTPS nativo com redirecionamento do GitHub, progresso de estado, limite de tamanho e verificação SHA-256 antes de iniciar o instalador.
 
