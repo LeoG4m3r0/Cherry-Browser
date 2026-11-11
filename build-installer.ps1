@@ -17,7 +17,8 @@ if (-not (Test-Path $csc)) { $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framewo
 if (-not (Test-Path $csc)) { throw 'O compilador C# do Windows não está disponível.' }
 
 $staging = Join-Path $projectRoot ('work\release-' + [Guid]::NewGuid().ToString('N'))
-$targetDir = Join-Path $staging 'cargo-target'
+$targetDir = Join-Path $projectRoot 'work\cargo-target'
+New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 New-Item -ItemType Directory -Force -Path $staging | Out-Null
 $previousTargetDir = $env:CARGO_TARGET_DIR
 $env:CARGO_TARGET_DIR = $targetDir

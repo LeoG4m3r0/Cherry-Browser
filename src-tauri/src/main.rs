@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::collections::HashMap;
 use std::process::Command;
+use std::io::{Read, Write};
 #[cfg(windows)]
 use webview2_com::{AcceleratorKeyPressedEventHandler, WebResourceRequestedEventHandler, Microsoft::Web::WebView2::Win32::{COREWEBVIEW2_KEY_EVENT_KIND, COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL, ICoreWebView2AcceleratorKeyPressedEventArgs}};
 #[cfg(windows)]
@@ -592,85 +593,58 @@ fn download_update(app: tauri::AppHandle, url: String, sha256: String, version: 
     if app.get_webview("update_download").is_some() {
         return Err("Já existe uma atualização em andamento.".into());
     }
-
-    let window = app.get_window("main").ok_or_else(|| "Janela principal não encontrada".to_string())?;
     let update_dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("updates");
     std::fs::create_dir_all(&update_dir).map_err(|e| e.to_string())?;
     let installer_path = update_dir.join(format!("Cherry-Browser-Setup-{version}.exe"));
     if installer_path.exists() { std::fs::remove_file(&installer_path).map_err(|e| e.to_string())?; }
-
-    let app_download = app.clone();
-    let app_finished = app.clone();
-    let download_seen = Arc::new(AtomicBool::new(false));
-    let callback_download_seen = download_seen.clone();
-    let expected_url = url.clone();
+    let expected_hash = expected_hash.clone();
     let installed_version = version.clone();
-    let builder = WebviewBuilder::new("update_download", WebviewUrl::External(target))
-        .on_download(move |_view, event| match event {
-            DownloadEvent::Requested { url, destination } => {
-                let host = url.host_str().unwrap_or_default();
-                let requested_name = url.path_segments().and_then(|mut segments| segments.next_back()).unwrap_or_default();
-                let expected_host = host == "github.com" || host == "release-assets.githubusercontent.com" || host == "objects.githubusercontent.com";
-                let matches_asset = url.as_str() == expected_url || (expected_host && requested_name == "Cherry-Browser-Setup.exe");
-                if !matches_asset {
-                    emit_update_status(&app_download, "failed", "A origem do arquivo baixado não corresponde ao instalador do release.");
-                    return false;
-                }
-                callback_download_seen.store(true, Ordering::Relaxed);
-                *destination = installer_path.clone();
-                emit_update_status(&app_download, "downloading", &format!("Baixando a versão {installed_version}…"));
-                true
-            }
-            DownloadEvent::Finished { path, success, .. } => {
-                let Some(path) = path else {
-                    emit_update_status(&app_download, "failed", "O WebView2 não informou onde salvou o instalador.");
-                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
-                    return true;
-                };
-                if !success {
-                    let _ = std::fs::remove_file(&path);
-                    emit_update_status(&app_download, "failed", "O download da atualização falhou. Tente novamente.");
-                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
-                    return true;
-                }
-                let bytes = match std::fs::read(&path) {
-                    Ok(bytes) => bytes,
-                    Err(error) => {
-                        emit_update_status(&app_download, "failed", &format!("Não foi possível verificar o instalador: {error}"));
-                        if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
-                        return true;
-                    }
-                };
-                let actual_hash = format!("{:x}", Sha256::digest(&bytes));
-                if actual_hash != expected_hash {
-                    let _ = std::fs::remove_file(&path);
-                    emit_update_status(&app_download, "failed", "A verificação SHA-256 falhou; o instalador foi descartado.");
-                    if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
-                    return true;
-                }
-                match Command::new(&path).arg("--apply-update").arg(std::process::id().to_string()).spawn() {
-                    Ok(_) => {
-                        emit_update_status(&app_finished, "installing", &format!("Instalando a versão {installed_version}. O Cherry será reaberto ao concluir…"));
-                        app_finished.exit(0);
-                    }
-                    Err(error) => {
-                        emit_update_status(&app_download, "failed", &format!("O download foi verificado, mas o instalador não iniciou: {error}"));
-                        if let Some(view) = app_download.get_webview("update_download") { let _ = view.close(); }
-                    }
-                }
-                true
-            }
-            _ => true,
-        });
-    let download_view = window.add_child(builder, LogicalPosition::new(0.0, 0.0), LogicalSize::new(1.0, 1.0))
-        .map_err(|e| e.to_string())?;
-    download_view.hide().map_err(|e| e.to_string())?;
-    let timeout_app = app.clone();
+    let requested_url = target.to_string();
+    let worker_app = app.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(90));
-        if !download_seen.load(Ordering::Relaxed) {
-            emit_update_status(&timeout_app, "failed", "O GitHub não iniciou o download do instalador. Verifique sua conexão e tente novamente.");
-            if let Some(view) = timeout_app.get_webview("update_download") { let _ = view.close(); }
+        let result = (|| -> Result<(), String> {
+            emit_update_status(&worker_app, "downloading", &format!("Baixando a versão {installed_version}…"));
+            let client = reqwest::blocking::Client::builder()
+                .timeout(std::time::Duration::from_secs(600))
+                .user_agent(concat!("Cherry-Browser/", env!("CARGO_PKG_VERSION")))
+                .build().map_err(|e| format!("Não foi possível iniciar o download: {e}"))?;
+            let mut response = client.get(requested_url).send()
+                .and_then(reqwest::blocking::Response::error_for_status)
+                .map_err(|e| format!("Falha ao baixar o instalador do GitHub: {e}"))?;
+            let final_url = response.url();
+            let final_host = final_url.host_str().unwrap_or_default();
+            if final_url.scheme() != "https" || !matches!(final_host, "github.com" | "release-assets.githubusercontent.com" | "objects.githubusercontent.com") {
+                return Err("O GitHub redirecionou o download para uma origem não permitida.".into());
+            }
+            if response.content_length().is_some_and(|length| length > 100 * 1024 * 1024) {
+                return Err("O instalador excede o tamanho máximo permitido de 100 MB.".into());
+            }
+            let mut output = std::fs::File::create(&installer_path).map_err(|e| format!("Não foi possível criar o arquivo de atualização: {e}"))?;
+            let mut hasher = Sha256::new();
+            let mut total = 0u64;
+            let mut buffer = [0u8; 64 * 1024];
+            loop {
+                let count = response.read(&mut buffer).map_err(|e| format!("O download foi interrompido: {e}"))?;
+                if count == 0 { break; }
+                total += count as u64;
+                if total > 100 * 1024 * 1024 { return Err("O instalador excede o tamanho máximo permitido de 100 MB.".into()); }
+                output.write_all(&buffer[..count]).map_err(|e| format!("Não foi possível salvar o instalador: {e}"))?;
+                hasher.update(&buffer[..count]);
+            }
+            output.sync_all().map_err(|e| format!("Não foi possível finalizar o arquivo baixado: {e}"))?;
+            drop(output);
+            emit_update_status(&worker_app, "verifying", "Download concluído. Conferindo a integridade do instalador…");
+            let actual_hash = format!("{:x}", hasher.finalize());
+            if actual_hash != expected_hash { return Err("A verificação SHA-256 falhou; o instalador foi descartado.".into()); }
+            emit_update_status(&worker_app, "installing", &format!("Instalando a versão {installed_version}. O Cherry será reaberto ao concluir…"));
+            Command::new(&installer_path).arg("--apply-update").arg(std::process::id().to_string()).spawn()
+                .map_err(|e| format!("O download foi verificado, mas o instalador não iniciou: {e}"))?;
+            worker_app.exit(0);
+            Ok(())
+        })();
+        if let Err(error) = result {
+            let _ = std::fs::remove_file(&installer_path);
+            emit_update_status(&worker_app, "failed", &error);
         }
     });
     Ok(())

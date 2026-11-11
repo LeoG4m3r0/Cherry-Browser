@@ -1,1 +1,147 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíÛ<N‹Z–‹­¦ëeŠw¬ÔŒŒ€À¸Ð¸ÄÌµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÄ4(4(´<Ù•É¥™¥…‘½È…½É„‰…¥á„…ÕÑ½µ…Ñ¥…µ•¹Ñ”¼¥¹ÍÑ…±…‘½È‘¼É•±•…Í”°Ù…±¥‘„¼M!´ÈÔØÁÕ‰±¥…‘¼Á•±¼¥Ñ!Õˆ°¥¹ÍÑ…±„„…ÑÕ…±¥é‡Ÿ¼…ÃÍÌ™•¡…È¼¡•ÉÉä”É•…‰É”¼¹…Ù•…‘½È¸4(4(ŒŒ€À¸Ð¸ÄÈµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´<‰±½ÅÕ•…‘½È…½É„¥¹Ñ•ÉÉ½µÁ”É•ÅÕ¥Í§ŸÕ•Ì½¹¡•¥‘…Ì‘”…»é¹¥½Ì”É…ÍÑÉ•…‘½É•Ì¹¼]•‰Y¥•ÜÈ…¹Ñ•Ì‘¼‘½Ý¹±½…°½´±¥„½‘•Í±¥„¥µ•‘¥…Ñ¼Á½È…‰„”É•É…ÌÙ¥ÍÕ…¥Ì…µÁ±¥…‘…Ì¸4(4(ŒŒ€À¸Ð¸ÄÄµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´I•ÍÑ…ÕÉ…‘¼¼…Ñ…±¡¼‘¥É•Ñ¼Á…É„¼MÁ••‘Ñ•ÍÐ‘„=½­±„•´Õµ„¹½Ù„Õ¥„¸4(4(ŒŒ€À¸Ð¸ÄÀµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´I•µ½Ù¥‘¼¼‰½Ó¼ÅÕ”¥¹¥¥…Ù„¼™±Õá¼‘”±½¥¸‘¼MÁ½Ñ¥™äì±¥¹­ÌÃé‰±¥½ÌÁ½‘•´Í•È…‰•ÉÑ½ÌÍ•´•¹ÑÉ…È°”„½¹Ñ„ÏÌƒ¤ÕÍ…‘„Í”¼ÁËÍÁÉ¥¼MÁ½Ñ¥™äÍ½±¥¥Ñ…È¸4(4(ŒŒ€À¸Ð¸äµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´<…Ñ…±¡¼‘”Ñ•ÍÑ”‘”Ù•±½¥‘…‘”…½É„Á•ÍÅÕ¥Í„ÕÍ…¹‘¼¼µ•…¹¥Íµ¼Á…‘Ë¼•Í½±¡¥‘¼¹…Ì½¹™¥ÕÉ‡ŸÕ•Ì°¥¹±Õ¥¹‘¼	É…Ù”M•…É ¸4(4(ŒŒ€À¸Ð¸àµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´½ÉÉ¥¥‘„„½É‘•´Ù¥ÍÕ…°‘¼]•‰Y¥•Ü¹…Ñ¥Ù¼‘¼MÁ½Ñ¥™äÁ…É„¼Á±…å•È…Á…É••ÈÍ½‰É”„Ã…¥¹„¸4(´<µ¥¹¤µÁ±…å•È¥¹™½Éµ„ÅÕ…¹‘¼¼•µ‰•Ñ•Éµ¥¹„‘”…ÉÉ•…È”½¹Ñ¥¹Õ„ÕÍ…¹‘¼¼Á•É™¥°¹½Éµ…°‘¼¡•ÉÉä¸4(´‘¥¥½¹…‘¼MÁ••‘Ñ•ÍÐ‘„=½­±„½µ¼Õµ„Ã…¥¹„¹…Ñ¥Ù„•´Õµ„¹½Ù„Õ¥„¸4(´‘¥¥½¹…‘„•Í½±¡„‘”9LÍ½‰É”!QQALè±½Õ‘™±…É”Á½ÈÁ…‘Ë¼°½½±”°EÕ…ä½Ô9L‘„É•‘”¸ÑÉ½„Á½‘”Í•È…Á±¥…‘„É•¥¹¥¥…¹‘¼¼¹…Ù•…‘½È¸4(4(ŒŒ€À¸Ð¸Üµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´<MÁ½Ñ¥™ä…½É„…‰É”•´Õµ„]•‰Y¥•ÜÁËÍÁÉ¥„Í½‰É”¼µ¥¹¤µÁ±…å•È°¹¼Á•É™¥°½µÁ…ÉÑ¥±¡…‘¼‘¼¡•ÉÉä°Í•´‘•Á•¹‘•È‘”½½­¥•Ì‘”¥™É…µ”‘”Ñ•É•¥É½Ì¸4(´<µ¥¹¤µÁ±…å•ÈÉ•ÕÑ¥±¥é„„Í•ÍÏ¼¥¹¥¥…‘„¹¼]•ˆA±…å•È‘¼MÁ½Ñ¥™ä•´Õµ„Õ¥„‘¼¡•ÉÉä¸4(4(ŒŒ€À¸Ð¸Øµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´¼…‰É¥È¼µ¥¹¤µÁ±…å•È°¼¥Ñ•´MÁ½Ñ¥™äÍ…±Ù¼ƒ¤…ÉÉ•…‘¼¹½Ù…µ•¹Ñ”Á…É„ÕÍ…ÈÕµ„Í•ÍÏ¼…ÕÑ•¹Ñ¥…‘„¹¼¡•ÉÉä¸4(´<±½¥¸ƒ¤™•¥Ñ¼¹¼Í¥Ñ”½™¥¥…°•´Õµ„Õ¥„‘¼¹…Ù•…‘½Èì»¼•á¥”±¥•¹Ð%¹•´¥µÁ½ÉÑ„É•‘•¹¥…¥Ì‘”½ÕÑÉ½Ì¹…Ù•…‘½É•Ì¸4(4(ŒŒ€À¸Ð¸Ôµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ4(4(´<µ¥¹¤µÁ±…å•È‘¼MÁ½Ñ¥™ä…¹¡½ÔÕ´‰½Ó¼Á…É„…‰É¥È¼MÁ½Ñ¥™ä”•¹ÑÉ…È¹„½¹Ñ„•´Õµ„¹½Ù„Õ¥„¸4(´A•ÉÍ½¹…±¥é‡Ÿ¼Á•Éµ¥Ñ”•Í½±¡•È•¹ÑÉ”¥¹¥¥…È½´Õµ„¹½Ù„Õ¥„½ÔÉ•ÍÑ…ÕÉ…È…ÌÕ¥…Ì‘„Í•ÍÏ¼…¹Ñ•É¥½È¸4(4(Œ!¥ÍÓÍÉ¥¼‘”Ù•ÉÏÕ•Ì((ŒŒ€À¸Ð¸Ðµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ((´´M½‰É”°¼Ù•É¥™¥…‘½È…½É„½™•É•”¼‘½Ý¹±½…‘¥É•Ñ¼‘¼¥¹ÍÑ…±…‘½ÈÅÕ…¹‘¼•¹½¹ÑÉ„Õµ„Ù•ÉÏ¼Ãé‰±¥„µ…¥ÌÉ••¹Ñ”¸(´<•ÍÑ…‘¼‘¥™•É•¹¥„Õµ„Ù•ÉÏ¼¥¹ÍÑ…±…‘„…¥¹‘„»¼ÁÕ‰±¥…‘„‘”Õµ„Ù•ÉÏ¼Ãé‰±¥„…ÑÕ…±¥é…‘„¸((ŒŒ€À¸Ð¸Ìµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ((´‘¥¥½¹…‘¼µ¥¹¤µÁ±…å•È™±ÕÑÕ…¹Ñ”‘¼MÁ½Ñ¥™ä©Õ¹Ñ¼…½Ì‰½ÓÕ•Ì‘”™…Ù½É¥Ñ½Ì°‘½Ý¹±½…‘Ì”‰±½ÅÕ•…‘½È¸(´A±…å•È…•¥Ñ„±¥¹­Ì”UI%Ì‘”™…¥á„°ƒ…±‰Õ´°Á±…å±¥ÍÐ°…ÉÑ¥ÍÑ„°•Á¥ÏÍ‘¥¼½ÔÁ½‘…ÍÐ”±•µ‰É„¼ƒé±Ñ¥µ¼¥Ñ•´ÕÍ…‘¼¸(´<Á½ÁÕÀÉ•½ÉÑ„…Á•¹…Ì„ƒ…É•„½ÉÉ•ÍÁ½¹‘•¹Ñ”‘„Ã…¥¹„¹…Ñ¥Ù„Á…É„…Á…É••ÈÍ½‰É”•±„Í•´™•¡…È„¹…Ù•‡Ÿ¼¸((ŒŒ€À¸Ð¸Èµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´ÄÀ((´Ìƒé±Ñ¥µ…Ì…‰…Ì!QQ@½!QQAL…‰•ÉÑ…ÌÏ¼É•ÍÑ…ÕÉ…‘…Ì…¼¥¹¥¥…Èì…‰…ÌÁÉ¥Ù…‘…Ì¹Õ¹„•¹ÑÉ…´¹„Í•ÍÏ¼Í…±Ù„¸(´‘¥¥½¹…‘½ÌÑÉ°­H°ÑÉ°­Q…‹<¶‰žËkºwµça„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´½ÉÉ¥¥‘„„É•ÍÑ…ÕÉ‡Ÿ¼‘¼É•½ÉÑ”‘¼µ•¹Ô…¼…‰É¥ÈÁ…¥»¥¥Ì”…±Ñ•É¹…È…‰…Ì¸(´½ÉÉ¥¥‘¼¼É•Ñ½É¹¼ƒ€¹…Ù•‡Ÿ¼…¼Í…¥È‘”Õ´Á…¥¹•°Á•±¼•¹‘•É—¼½ÔÁ•±¼‰½Ó¼%»µ¥¼¸(´<‰±½ÅÕ•…‘½È‘”…»é¹¥½Ì…½É„…Á±¥„”É•µ½Ù”ÍÕ„™½±¡„‘”•ÍÑ¥±½Ì…¼…±Ñ•É¹…È„½ÃŸ¼¸(´ÉÕÁ…‘„„¥¹ÍÁ—Ÿ¼‘”•±•µ•¹Ñ½Ì¹½Ù½ÌÁ…É„É•‘Õé¥ÈÙ…ÉÉ•‘ÕÉ…ÌÉ•Á•Ñ¥‘…Ì•´Ã…¥¹…Ì‘¥»‰µ¥…Ì¸(´I•‘Õé¥‘…Ì¡…µ…‘…Ì¹…Ñ¥Ù…Ì‘ÕÉ…¹Ñ”¼É•‘¥µ•¹Í¥½¹…µ•¹Ñ¼”„ÑÉ½„‘”…‰…Ìì±¥ÍÑ…Ì±½…¥Ì¥¹Û…±¥‘…Ì…½É„Ï¼¥¹½É…‘…Ì½´Í•ÕÉ…»„¸((ŒŒ€À¸Ì¸Üµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´5•¹Ô‘¼¹…Ù•…‘½È…½É„Í”Í½‰É•ÃÕ”ƒ€Ã…¥¹„¹„Á½Í§Ÿ¼…ÑÕ…°°Í•´É•‘¥µ•¹Í¥½»„µ±„½Ôµ½Û¨µ±„¸(´ƒ…É•„Í½ˆ¼Á½ÁÕÀƒ¤±¥‰•É…‘„Á•±„©…¹•±„¹…Ñ¥Ù„‘„Ã…¥¹„”É•ÍÑ…ÕÉ…‘„…¼™•¡…È¼µ•¹Ô¸((ŒŒ€À¸Ì¸Øµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´%µÁ±•µ•¹Ñ‡Ÿ¼•áÁ•É¥µ•¹Ñ…°‘”µ•¹Ô™±ÕÑÕ…¹Ñ”ìÍÕ‰ÍÑ¥Ñ×µ‘„¹„€À¸Ì¸ÜÁ½ÈÉ•½ÉÑ”¹…Ñ¥Ù¼±½…±¥é…‘¼‘„Ã…¥¹„¸((ŒŒ€À¸Ì¸Ôµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´I•µ½Ù¥‘¼¼Á…¥¹•°¥¹é„‘¼™Õ¹‘¼‘¼µ•¹Ôì„‰…ÉÉ„”„Ã…¥¹„™¥…´Ù¥ÏµÙ•¥Ì¸(ŒŒ€À¸Ì¸Ðµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´I•™¥¹…‘¼¼™Õ¹‘¼‘¼µ•¹ÔÁ…É„µ…¹Ñ•È½Ì½¹ÑÉ½±•Ì‘„‰…ÉÉ„±•ŸµÙ•¥Ì¸(´©ÕÍÑ…‘½Ì½Ì‰½ÓÕ•Ì‘¼Ñ•µ„±…É¼Á…É„•Ù¥Ñ…È…ÉÓÕ•ÌÉ½Í„µÕ¥Ñ¼™½ÉÑ•Ì¸((ŒŒ€À¸Ì¸Ìµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´½ÉÉ¥¥‘¼¼ƒµ½¹”]¥¹‘½ÝÌ‘¼•á•ÕÓ…Ù•°½´„µ…É„‘”•É•©„‘¼¡•ÉÉä	É½ÝÍ•È¸(´á•ÕÓ…Ù•°½µÁ¥±…‘¼½µ¼…Á±¥…Ñ¥Ù¼Ë…™¥¼‘¼]¥¹‘½ÝÌ°Í•´©…¹•±„‘”Ñ•Éµ¥¹…°¸(´5•¹Ôµ…¹Ó¥´„Ã…¥¹„…‰•ÉÑ„Ù¥ÏµÙ•°”É•Í•ÉÙ„•ÍÁ‡¼ÁËÍÁÉ¥¼•¹ÅÕ…¹Ñ¼•ÍÓ„…‰•ÉÑ¼¸(´I•™•¥Ñ½Ì½ÌÑ•µ…Ì•É•©„°±…É¼”9½¥Ñ”½´ÍÕÁ•É›µ¥•Ì”½¹ÑÉ…ÍÑ”½¹Í¥ÍÑ•¹Ñ•Ì¸((ŒŒ€À¸Ì¸Èµ…±Á¡„ƒŠP€ÈÀÈØ´ÄÄ´Àä((´½ÉÉ¥¥‘¼¼µ•¹Ô‘”ÑË©ÌÁ½¹Ñ½ÌèÃ…¥¹…Ì]•‰Y¥•ÜÈÏ¼•Í½¹‘¥‘…Ì•¹ÅÕ…¹Ñ¼¼µ•¹Ô•ÍÓ„…‰•ÉÑ¼”É•ÍÑ…ÕÉ…‘…Ì…¼™•¡…È¸(´5…É…‘¼¼…ÁÀ½µ¼1A!¹„Ã…¥¹„¥¹¥¥…°°¹„Í—Ÿ¼M½‰É””¹¼¥¹ÍÑ…±…‘½È¸(´•¹ÑÉ…±¥é…‘„„Ù•ÉÏ¼”¼…¹…°•´YIM%=8¹©Í½¹€ì¼‰Õ¥±Ù•É¥™¥„¼µ…¹¥™•ÍÑ¼…¹Ñ•Ì‘”½µÁ¥±…È¸(´<‰Õ¥±ÑÉ½„½Ì•á•ÕÓ…Ù•¥Ì”i%AÌ‘„Ù•ÉÏ¼…¹Ñ•É¥½È”ÁÉ•Í•ÉÙ„¼Í‘¥¼µ™½¹Ñ”¸((ŒŒ€À¸Ì¸ÄƒŠP€ÈÀÈØ´ÄÄ´Àä((´I•µ½Ù¥‘½Ì½Ì½¹ÑÉ½±•Ì‘”©…¹•±„‘ÕÁ±¥…‘½Ììµ¥¹¥µ¥é…È°µ…á¥µ¥é…È”™•¡…È™¥…´¹„‰…ÉÉ„¹…Ñ¥Ù„‘¼]¥¹‘½ÝÌ¸(´Õµ•¹Ñ…‘¼¼Ñ…µ…¹¡¼·µ¹¥µ¼‘„©…¹•±„Á…É„µ…¹Ñ•È„¥¹Ñ•É™…”±•ŸµÙ•°¸((ŒŒ€À¸Ì¸ÀƒŠP€ÈÀÈØ´ÄÄ´Àä((´‘¥¥½¹…‘„Á•ÉÍ½¹…±¥é‡Ÿ¼‘”Ñ•µ„”…Á„‘”•É•©…ÌÁ…É„„Ã…¥¹„¥¹¥¥…°¸(´‘¥¥½¹…‘¼‰±½ÅÕ•¥¼‹…Í¥¼‘”…»é¹¥½Ì”É…ÍÑÉ•…‘½É•Ì½¹¡•¥‘½Ì°½´½¹ÑÉ½±”¹…Ì½¹™¥ÕÉ‡ŸÕ•Ì¸(´‘¥¥½¹…‘…Ì½ÃŸÕ•Ì½½±”°5¥É½Í½™Ð	¥¹œ€¡ÕÍ…‘¼Á•±¼‘”¤°	É…Ù”M•…É ”Õ­Õ­¼¸(´%¹ÍÑ…±…‘½ÈÉ••‰•ÔÑ•±„Ë…™¥„¹…Ñ¥Ù„°¥¹ÍÑ…±‡Ÿ¼Á½ÈÕÍ×…É¥¼Í•´Ñ•Éµ¥¹…°”½ÃŸ¼‘”…Ñ…±¡¼¹„ƒÉ•„‘”QÉ…‰…±¡¼¸(´ƒ5½¹”°™…Ù¥½¸”…Á„ÁËÍÁÉ¥½Ì½´„™ÉÕÑ„•É•©„¸((ŒŒ€À¸È¸ÀƒŠP€ÈÀÈØ´ÄÄ´Àä((´I•¹½µ•…‘¼‘”1•Ù”	É½ÝÍ•ÈÁ…É„¡•ÉÉä	É½ÝÍ•È¸(´½ÉÉ¥¥‘¼¼…ÉÉ•…µ•¹Ñ¼‘„¥¹Ñ•É™…”½´Y¥Ñ”ì½Ì·Í‘Õ±½ÌQ…ÕÉ¤…½É„Ï¼•µÁ…½Ñ…‘½Ì½ÉÉ•Ñ…µ•¹Ñ”¸(´‘¥¥½¹…‘…Ì…‰…Ì]•‰Y¥•ÜÈ°¹…Ù•‡Ÿ¼°‰ÕÍ„°™…Ù½É¥Ñ½Ì°¡¥ÍÓÍÉ¥¼°‘½Ý¹±½…‘Ì°µ½‘¼ÁÉ¥Ù…‘¼”½¹™¥ÕÉ‡ŸÕ•Ì¸4(4(4(4
+## 0.4.13-alpha â€” 2026-11-11
+
+- O verificador agora baixa automaticamente o instalador do release, valida o SHA-256 publicado pelo GitHub, instala a atualizaÃ§Ã£o apÃ³s fechar o Cherry e reabre o navegador.
+
+## 0.4.12-alpha â€” 2026-11-10
+
+- O bloqueador agora interrompe requisiÃ§Ãµes conhecidas de anÃºncios e rastreadores no WebView2 antes do download, com liga/desliga imediato por aba e regras visuais ampliadas.
+
+## 0.4.11-alpha â€” 2026-11-10
+
+- Restaurado o atalho direto para o Speedtest da Ookla em uma nova guia.
+
+## 0.4.10-alpha â€” 2026-11-10
+
+- Removido o botÃ£o que iniciava o fluxo de login do Spotify; links pÃºblicos podem ser abertos sem entrar, e a conta sÃ³ Ã© usada se o prÃ³prio Spotify solicitar.
+
+## 0.4.9-alpha â€” 2026-11-10
+
+- O atalho de teste de velocidade agora pesquisa usando o mecanismo padrÃ£o escolhido nas configuraÃ§Ãµes, incluindo Brave Search.
+
+## 0.4.8-alpha â€” 2026-11-10
+
+- Corrigida a ordem visual do WebView nativo do Spotify para o player aparecer sobre a pÃ¡gina.
+- O mini-player informa quando o embed termina de carregar e continua usando o perfil normal do Cherry.
+- Adicionado Speedtest da Ookla como uma pÃ¡gina nativa em uma nova guia.
+- Adicionada escolha de DNS sobre HTTPS: Cloudflare por padrÃ£o, Google, Quad9 ou DNS da rede. A troca pode ser aplicada reiniciando o navegador.
+
+## 0.4.7-alpha â€” 2026-11-10
+
+- O Spotify agora abre em uma WebView prÃ³pria sobre o mini-player, no perfil compartilhado do Cherry, sem depender de cookies de iframe de terceiros.
+- O mini-player reutiliza a sessÃ£o iniciada no Web Player do Spotify em uma guia do Cherry.
+
+## 0.4.6-alpha â€” 2026-11-10
+
+- Ao abrir o mini-player, o item Spotify salvo Ã© carregado novamente para usar uma sessÃ£o autenticada no Cherry.
+- O login Ã© feito no site oficial em uma guia do navegador; nÃ£o exige Client ID nem importa credenciais de outros navegadores.
+
+## 0.4.5-alpha â€” 2026-11-10
+
+- O mini-player do Spotify ganhou um botÃ£o para abrir o Spotify e entrar na conta em uma nova guia.
+- PersonalizaÃ§Ã£o permite escolher entre iniciar com uma nova guia ou restaurar as guias da sessÃ£o anterior.
+
+# HistÃ³rico de versÃµes
+
+## 0.4.4-alpha â€” 2026-11-10
+
+- Em Sobre, o verificador agora oferece o download direto do instalador quando encontra uma versÃ£o pÃºblica mais recente.
+- O estado diferencia uma versÃ£o instalada ainda nÃ£o publicada de uma versÃ£o pÃºblica atualizada.
+
+## 0.4.3-alpha â€” 2026-11-10
+
+- Adicionado mini-player flutuante do Spotify junto aos botÃµes de favoritos, downloads e bloqueador.
+- Player aceita links e URIs de faixa, Ã¡lbum, playlist, artista, episÃ³dio ou podcast e lembra o Ãºltimo item usado.
+- O popup recorta apenas a Ã¡rea correspondente da pÃ¡gina nativa para aparecer sobre ela sem fechar a navegaÃ§Ã£o.
+
+## 0.4.2-alpha â€” 2026-11-10
+
+- As Ãºltimas abas HTTP/HTTPS abertas sÃ£o restauradas ao iniciar; abas privadas nunca entram na sessÃ£o salva.
+- Adicionados Ctrl+R, Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+Shift+N e Ctrl+Shift+T, inclusive com foco dentro de pÃ¡ginas.
+- O verificador em Sobre consulta os Releases pÃºblicos do GitHub, compara versÃµes e abre a pÃ¡gina da versÃ£o disponÃ­vel.
+- Restaurar uma sessÃ£o nÃ£o duplica as pÃ¡ginas no HistÃ³rico.
+- A barra de ferramentas mostra quando a pÃ¡gina carrega e permite interromper o carregamento.
+- Favoritos podem ser removidos diretamente pela lista de gerenciamento.
+
+## 0.4.1-alpha â€” 2026-11-09
+
+- Adicionado â€œVerificar atualizaÃ§Ãµesâ€ em Sobre; informa que a checagem remota depende de um canal pÃºblico de releases.
+- Favoritos e controle do bloqueador agora ficam junto a Downloads na barra.
+- O botÃ£o de nova aba acompanha as abas e rola para o fim da faixa conforme a lista cresce.
+- Melhorado o estado visual do bloqueador e o acesso rÃ¡pido a Favoritos.
+
+## 0.4.0-alpha â€” 2026-11-09
+
+- Atalhos Ctrl+T, Ctrl+L e Ctrl+W interceptados pelo WebView2 mesmo quando o site estÃ¡ focado.
+- Limpeza de dados tambÃ©m funciona sem abas de navegaÃ§Ã£o abertas; remove histÃ³rico local, cookies e cache do perfil do navegador.
+- Estrela da barra de endereÃ§o indica favoritos salvos usando a cor do tema e alterna adicionar/remover.
+- Corrigida a versÃ£o de reserva mostrada pela interface.
+- Ampliados os domÃ­nios e seletores usados pelo bloqueador bÃ¡sico de anÃºncios.
+
+## 0.3.9-alpha â€” 2026-11-09
+
+- Adicionada a assinatura â€œby Leo e Viniâ€ Ã  seÃ§Ã£o Sobre.
+
+## 0.3.8-alpha â€” 2026-11-09
+
+- Corrigida a restauraÃ§Ã£o do recorte do menu ao abrir painÃ©is e alternar abas.
+- Corrigido o retorno Ã  navegaÃ§Ã£o ao sair de um painel pelo endereÃ§o ou pelo botÃ£o InÃ­cio.
+- O bloqueador de anÃºncios agora aplica e remove sua folha de estilos ao alternar a opÃ§Ã£o.
+- Agrupada a inspeÃ§Ã£o de elementos novos para reduzir varreduras repetidas em pÃ¡ginas dinÃ¢micas.
+- Reduzidas chamadas nativas durante o redimensionamento e a troca de abas; listas locais invÃ¡lidas agora sÃ£o ignoradas com seguranÃ§a.
+
+## 0.3.7-alpha â€” 2026-11-09
+
+- Menu do navegador agora se sobrepÃµe Ã  pÃ¡gina na posiÃ§Ã£o atual, sem redimensionÃ¡-la ou movÃª-la.
+- A Ã¡rea sob o popup Ã© liberada pela janela nativa da pÃ¡gina e restaurada ao fechar o menu.
+
+## 0.3.6-alpha â€” 2026-11-09
+
+- ImplementaÃ§Ã£o experimental de menu flutuante; substituÃ­da na 0.3.7 por recorte nativo localizado da pÃ¡gina.
+
+## 0.3.5-alpha â€” 2026-11-09
+
+- Removido o painel cinza do fundo do menu; a barra e a pÃ¡gina ficam visÃ­veis.
+## 0.3.4-alpha â€” 2026-11-09
+
+- Refinado o fundo do menu para manter os controles da barra legÃ­veis.
+- Ajustados os botÃµes do tema Claro para evitar cartÃµes rosa muito fortes.
+
+## 0.3.3-alpha â€” 2026-11-09
+
+- Corrigido o Ã­cone Windows do executÃ¡vel com a marca de cereja do Cherry Browser.
+- ExecutÃ¡vel compilado como aplicativo grÃ¡fico do Windows, sem janela de terminal.
+- Menu mantÃ©m a pÃ¡gina aberta visÃ­vel e reserva espaÃ§o prÃ³prio enquanto estÃ¡ aberto.
+- Refeitos os temas Cereja, Claro e Noite com superfÃ­cies e contraste consistentes.
+
+## 0.3.2-alpha â€” 2026-11-09
+
+- Corrigido o menu de trÃªs pontos: pÃ¡ginas WebView2 sÃ£o escondidas enquanto o menu estÃ¡ aberto e restauradas ao fechar.
+- Marcado o app como ALPHA na pÃ¡gina inicial, na seÃ§Ã£o Sobre e no instalador.
+- Centralizada a versÃ£o e o canal em `VERSION.json`; o build verifica o manifesto antes de compilar.
+- O build troca os executÃ¡veis e ZIPs da versÃ£o anterior e preserva o cÃ³digo-fonte.
+
+## 0.3.1 â€” 2026-11-09
+
+- Removidos os controles de janela duplicados; minimizar, maximizar e fechar ficam na barra nativa do Windows.
+- Aumentado o tamanho mÃ­nimo da janela para manter a interface legÃ­vel.
+
+## 0.3.0 â€” 2026-11-09
+
+- Adicionada personalizaÃ§Ã£o de tema e capa de cerejas para a pÃ¡gina inicial.
+- Adicionado bloqueio bÃ¡sico de anÃºncios e rastreadores conhecidos, com controle nas configuraÃ§Ãµes.
+- Adicionadas opÃ§Ãµes Google, Microsoft Bing (usado pelo Edge), Brave Search e DuckDuckGo.
+- Instalador recebeu tela grÃ¡fica nativa, instalaÃ§Ã£o por usuÃ¡rio sem terminal e opÃ§Ã£o de atalho na Ãrea de Trabalho.
+- Ãcone, favicon e capa prÃ³prios com a fruta cereja.
+
+## 0.2.0 â€” 2026-11-09
+
+- Renomeado de Leve Browser para Cherry Browser.
+- Corrigido o carregamento da interface com Vite; os mÃ³dulos Tauri agora sÃ£o empacotados corretamente.
+- Adicionadas abas WebView2, navegaÃ§Ã£o, busca, favoritos, histÃ³rico, downloads, modo privado e configuraÃ§Ãµes.
+
+
+
+## 0.4.14-alpha
+
+- SubstituÃ­do o download oculto do WebView2 por download HTTPS nativo com redirecionamento do GitHub, progresso de estado, limite de tamanho e verificaÃ§Ã£o SHA-256 antes de iniciar o instalador.
+

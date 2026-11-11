@@ -30,7 +30,7 @@ O bloqueador usa regras básicas de domínios e elementos; não tem a cobertura 
 
 ## Versões e builds
 
-`VERSION.json` é a fonte da versão e do canal. O build confere se Cargo, Tauri e npm correspondem ao manifesto, compila o código-fonte atual, publica um executável com versão no nome, substitui os arquivos de release anteriores em `outputs` e preserva a pasta do código-fonte.
+`VERSION.json` é a fonte da versão e do canal. O build confere se Cargo, Tauri e npm correspondem ao manifesto, compila o código-fonte atual, publica um executável com versão no nome, substitui os arquivos de release anteriores em `outputs` e preserva a pasta do código-fonte. O atualizador baixa o instalador nativamente via HTTPS, segue os redirecionamentos do GitHub, confere o SHA-256 e instala automaticamente.
 
 ## Recompilar no Windows
 
